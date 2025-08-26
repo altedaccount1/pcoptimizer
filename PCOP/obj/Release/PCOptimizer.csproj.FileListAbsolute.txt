@@ -1,0 +1,4 @@
+C:\Users\wyses\source\repos\PCOP\PCOP\obj\Release\PCOptimizer.csproj.AssemblyReference.cache
+C:\Users\wyses\source\repos\PCOP\PCOP\obj\Release\PCOP.Properties.Resources.resources
+C:\Users\wyses\source\repos\PCOP\PCOP\obj\Release\PCOptimizer.csproj.GenerateResource.cache
+C:\Users\wyses\source\repos\PCOP\PCOP\obj\Release\PCOptimizer.csproj.CoreCompileInputs.cache

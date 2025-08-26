@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Security.Cryptography;
-using System.Security.Cryptography.DataProtection;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -13,7 +12,7 @@ using System.Linq;
 
 namespace PCOptimizer.Security
 {
-    public class ProductionLicenseManager : IDisposable
+    public class LicenseManager : IDisposable
     {
         private const string LICENSE_SERVER_URL = "https://pcoptimzer-licensing-gvema2b0d0g0b9et.eastus-01.azurewebsites.net/api/license";
         private const string REGISTRY_KEY = @"SOFTWARE\PCOptimizer";
@@ -24,7 +23,7 @@ namespace PCOptimizer.Security
         private LicenseInfo currentLicense;
         private readonly HttpClient httpClient;
 
-        public ProductionLicenseManager()
+        public LicenseManager()
         {
             httpClient = new HttpClient();
             httpClient.Timeout = TimeSpan.FromSeconds(15);
