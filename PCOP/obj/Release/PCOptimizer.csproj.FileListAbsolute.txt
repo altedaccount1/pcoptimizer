@@ -36,3 +36,4 @@ C:\Users\wyses\source\repos\PCOP\PCOP\bin\Release\System.ValueTuple.xml
 C:\Users\wyses\source\repos\PCOP\PCOP\obj\Release\PCOptimi.FE962C78.Up2Date
 C:\Users\wyses\source\repos\PCOP\PCOP\obj\Release\PCOP.exe
 C:\Users\wyses\source\repos\PCOP\PCOP\obj\Release\PCOP.pdb
+C:\Users\wyses\source\repos\PCOP\PCOP\obj\Release\PCOP.exe.config

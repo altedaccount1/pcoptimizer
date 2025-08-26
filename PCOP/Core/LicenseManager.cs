@@ -1,4 +1,4 @@
-﻿// LicenseManager.cs - Fixed version with proper method naming
+﻿// LicenseManager.cs - Updated with hardcoded test licenses for development
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -15,10 +15,39 @@ namespace PCOptimizer.Security
 {
     public class LicenseManager : IDisposable
     {
-        private const string LICENSE_SERVER_URL = "https://pcoptimzer-licensing-gvema2b0d0g0b9et.eastus-01.azurewebsites.net/api/license";
+        private const string LICENSE_SERVER_URL = "https://pcoptimizer-licensing-gvema2b0d0g0b9et.eastus-01.azurewebsites.net/api/license";
         private const string REGISTRY_KEY = @"SOFTWARE\PCOptimizer";
         private const string LICENSE_VALUE = "SecureLicense";
         private const string HARDWARE_VALUE = "HardwareFingerprint";
+
+        // HARDCODED TEST LICENSES (Remove in production)
+        private static readonly Dictionary<string, TestLicense> TEST_LICENSES = new Dictionary<string, TestLicense>
+        {
+            ["PCOPT-TEST-2024-DEMO-001"] = new TestLicense
+            {
+                CustomerName = "Test User",
+                ExpirationDate = DateTime.Now.AddDays(30),
+                IsValid = true
+            },
+            ["PCOPT-DEV-2024-UNLIMITED"] = new TestLicense
+            {
+                CustomerName = "Developer",
+                ExpirationDate = DateTime.Now.AddYears(10),
+                IsValid = true
+            },
+            ["PCOPT-TRIAL-2024-WEEK"] = new TestLicense
+            {
+                CustomerName = "Trial User",
+                ExpirationDate = DateTime.Now.AddDays(7),
+                IsValid = true
+            },
+            ["PCOPT-PREMIUM-2024-YEAR"] = new TestLicense
+            {
+                CustomerName = "Premium User",
+                ExpirationDate = DateTime.Now.AddYears(1),
+                IsValid = true
+            }
+        };
 
         private string hardwareFingerprint;
         private LicenseInfo currentLicense;
@@ -32,6 +61,183 @@ namespace PCOptimizer.Security
 
             hardwareFingerprint = GenerateHardwareFingerprint();
             LoadStoredLicense();
+        }
+
+        public async Task<LicenseValidationResult> ValidateLicenseAsync(string licenseKey = null)
+        {
+            try
+            {
+                string keyToValidate = licenseKey ?? currentLicense?.LicenseKey;
+
+                if (string.IsNullOrEmpty(keyToValidate))
+                {
+                    return new LicenseValidationResult
+                    {
+                        IsValid = false,
+                        ErrorMessage = "No license key available"
+                    };
+                }
+
+                // Check hardcoded test licenses first (for development)
+                if (TEST_LICENSES.ContainsKey(keyToValidate))
+                {
+                    var testLicense = TEST_LICENSES[keyToValidate];
+                    if (testLicense.IsValid && DateTime.Now < testLicense.ExpirationDate)
+                    {
+                        var licenseInfo = new LicenseInfo
+                        {
+                            LicenseKey = keyToValidate,
+                            CustomerName = testLicense.CustomerName,
+                            ExpirationDate = testLicense.ExpirationDate,
+                            ValidationDate = DateTime.UtcNow
+                        };
+
+                        StoreLicenseSecurely(licenseInfo);
+                        currentLicense = licenseInfo;
+
+                        return new LicenseValidationResult
+                        {
+                            IsValid = true,
+                            LicenseInfo = licenseInfo
+                        };
+                    }
+                    else
+                    {
+                        return new LicenseValidationResult
+                        {
+                            IsValid = false,
+                            ErrorMessage = "Test license has expired"
+                        };
+                    }
+                }
+
+                // Try online validation if not a test license
+                return await ValidateOnlineAsync(keyToValidate);
+            }
+            catch (Exception ex)
+            {
+                return new LicenseValidationResult
+                {
+                    IsValid = false,
+                    ErrorMessage = $"Validation error: {ex.Message}"
+                };
+            }
+        }
+
+        private async Task<LicenseValidationResult> ValidateOnlineAsync(string licenseKey)
+        {
+            try
+            {
+                var validationRequest = new LicenseValidationRequest
+                {
+                    LicenseKey = licenseKey,
+                    HardwareFingerprint = hardwareFingerprint,
+                    ProductVersion = GetProductVersion(),
+                    MachineName = Environment.MachineName
+                };
+
+                var json = JsonSerializer.Serialize(validationRequest, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await httpClient.PostAsync($"{LICENSE_SERVER_URL}/validate", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseJson = await response.Content.ReadAsStringAsync();
+                    var result = JsonSerializer.Deserialize<LicenseValidationResponse>(responseJson, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    });
+
+                    if (result.IsValid)
+                    {
+                        var licenseInfo = new LicenseInfo
+                        {
+                            LicenseKey = licenseKey,
+                            CustomerName = result.CustomerName,
+                            ExpirationDate = result.ExpirationDate,
+                            ValidationDate = DateTime.UtcNow
+                        };
+
+                        StoreLicenseSecurely(licenseInfo);
+                        currentLicense = licenseInfo;
+
+                        return new LicenseValidationResult
+                        {
+                            IsValid = true,
+                            LicenseInfo = licenseInfo
+                        };
+                    }
+                    else
+                    {
+                        InvalidateLicense();
+                        return new LicenseValidationResult
+                        {
+                            IsValid = false,
+                            ErrorMessage = result.ErrorMessage
+                        };
+                    }
+                }
+
+                return new LicenseValidationResult
+                {
+                    IsValid = false,
+                    ErrorMessage = "Server communication failed"
+                };
+            }
+            catch (HttpRequestException)
+            {
+                // Network error - try offline validation
+                return ValidateOffline(licenseKey);
+            }
+            catch (Exception ex)
+            {
+                return new LicenseValidationResult
+                {
+                    IsValid = false,
+                    ErrorMessage = $"Online validation error: {ex.Message}"
+                };
+            }
+        }
+
+        // Method to generate new test licenses (for development)
+        public static string GenerateTestLicense(string prefix = "PCOPT")
+        {
+            string timestamp = DateTime.Now.ToString("yyyyMMdd");
+            string random = Guid.NewGuid().ToString("N")[..8].ToUpper();
+            return $"{prefix}-{timestamp}-{random}";
+        }
+
+        // Method to add temporary test license (for development)
+        public static void AddTestLicense(string licenseKey, string customerName, int validDays = 30)
+        {
+            TEST_LICENSES[licenseKey] = new TestLicense
+            {
+                CustomerName = customerName,
+                ExpirationDate = DateTime.Now.AddDays(validDays),
+                IsValid = true
+            };
+        }
+
+        // Get all available test licenses (for development UI)
+        public static Dictionary<string, TestLicense> GetTestLicenses()
+        {
+            return new Dictionary<string, TestLicense>(TEST_LICENSES);
+        }
+
+        // Rest of the original methods...
+        public async Task<bool> ValidateLicenseOnline(string licenseKey)
+        {
+            var result = await ValidateLicenseAsync(licenseKey);
+            return result.IsValid;
+        }
+
+        public string GetHardwareId()
+        {
+            return hardwareFingerprint;
         }
 
         private string GenerateHardwareFingerprint()
@@ -102,111 +308,6 @@ namespace PCOptimizer.Security
                 byte[] hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(combined + "PCOpt_Salt_2024"));
                 return Convert.ToBase64String(hash).Substring(0, 24);
             }
-        }
-
-        public async Task<LicenseValidationResult> ValidateLicenseAsync(string licenseKey = null)
-        {
-            try
-            {
-                // Use provided key or stored key
-                string keyToValidate = licenseKey ?? currentLicense?.LicenseKey;
-
-                if (string.IsNullOrEmpty(keyToValidate))
-                {
-                    return new LicenseValidationResult
-                    {
-                        IsValid = false,
-                        ErrorMessage = "No license key available"
-                    };
-                }
-
-                var validationRequest = new LicenseValidationRequest
-                {
-                    LicenseKey = keyToValidate,
-                    HardwareFingerprint = hardwareFingerprint,
-                    ProductVersion = GetProductVersion(),
-                    MachineName = Environment.MachineName
-                };
-
-                var json = JsonSerializer.Serialize(validationRequest, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await httpClient.PostAsync($"{LICENSE_SERVER_URL}/validate", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseJson = await response.Content.ReadAsStringAsync();
-                    var result = JsonSerializer.Deserialize<LicenseValidationResponse>(responseJson, new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    });
-
-                    if (result.IsValid)
-                    {
-                        var licenseInfo = new LicenseInfo
-                        {
-                            LicenseKey = keyToValidate,
-                            CustomerName = result.CustomerName,
-                            ExpirationDate = result.ExpirationDate,
-                            ValidationDate = DateTime.UtcNow
-                        };
-
-                        StoreLicenseSecurely(licenseInfo);
-                        currentLicense = licenseInfo;
-
-                        return new LicenseValidationResult
-                        {
-                            IsValid = true,
-                            LicenseInfo = licenseInfo
-                        };
-                    }
-                    else
-                    {
-                        // Clear invalid license
-                        InvalidateLicense();
-                        return new LicenseValidationResult
-                        {
-                            IsValid = false,
-                            ErrorMessage = result.ErrorMessage
-                        };
-                    }
-                }
-
-                return new LicenseValidationResult
-                {
-                    IsValid = false,
-                    ErrorMessage = "Server communication failed"
-                };
-            }
-            catch (HttpRequestException)
-            {
-                // Network error - try offline validation
-                return ValidateOffline(licenseKey);
-            }
-            catch (Exception ex)
-            {
-                return new LicenseValidationResult
-                {
-                    IsValid = false,
-                    ErrorMessage = $"Validation error: {ex.Message}"
-                };
-            }
-        }
-
-        // Fixed method name to match MainForm usage
-        public async Task<bool> ValidateLicenseOnline(string licenseKey)
-        {
-            var result = await ValidateLicenseAsync(licenseKey);
-            return result.IsValid;
-        }
-
-        // Added missing GetHardwareId method
-        public string GetHardwareId()
-        {
-            return hardwareFingerprint;
         }
 
         private LicenseValidationResult ValidateOffline(string licenseKey)
@@ -409,7 +510,15 @@ namespace PCOptimizer.Security
         }
     }
 
-    // Data classes
+    // Test license class for development
+    public class TestLicense
+    {
+        public string CustomerName { get; set; } = "";
+        public DateTime ExpirationDate { get; set; }
+        public bool IsValid { get; set; }
+    }
+
+    // Existing data classes
     public class LicenseInfo
     {
         public string LicenseKey { get; set; } = "";

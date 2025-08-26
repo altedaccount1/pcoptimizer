@@ -1,4 +1,4 @@
-﻿// MainForm.cs - Fixed lambda expression issue
+﻿// MainForm.cs - Enhanced version with ping testing and improved UI
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -18,16 +18,16 @@ namespace PCOptimizer
 
         // Controls
         private Label labelTitle, labelSystemInfo, labelLicenseStatus, labelOptimizationStatus;
+        private Label labelCurrentPing, labelPingStatus;
         private Button btnOptimizeForFPS, btnOptimizeWindows, btnOptimizeGraphics, btnOptimizeNetwork;
-        private Button btnCreateBackup, btnRestoreBackup, btnCheckStatus;
+        private Button btnCreateBackup, btnRestoreBackup, btnCheckStatus, btnTestPing;
         private ProgressBar progressBarMain;
-        private GroupBox groupSystemInfo, groupOptimizations, groupBackup, groupStatus;
+        private GroupBox groupSystemInfo, groupOptimizations, groupBackup, groupStatus, groupPing;
         private RichTextBox logTextBox;
 
         public MainForm()
         {
             InitializeComponent();
-            // Fixed: Use Task.Run instead of discard pattern
             Task.Run(async () => await InitializeAsync());
         }
 
@@ -50,6 +50,7 @@ namespace PCOptimizer
                 await LoadSystemInformation();
                 await CheckLicenseStatus();
                 await UpdateOptimizationStatus();
+                await TestCurrentPing(); // Test initial ping
 
                 LogMessage("PC Performance Optimizer initialized successfully.");
             }
@@ -155,9 +156,39 @@ namespace PCOptimizer
             }
         }
 
+        private async Task TestCurrentPing()
+        {
+            try
+            {
+                labelPingStatus.Text = "Testing ping...";
+                labelPingStatus.ForeColor = Color.Yellow;
+
+                int ping = await optimizationEngine.TestCurrentPing();
+
+                if (ping > 0)
+                {
+                    labelCurrentPing.Text = $"Current Ping: {ping}ms";
+                    labelPingStatus.Text = ping < 50 ? "Excellent" : ping < 100 ? "Good" : ping < 150 ? "Fair" : "Poor";
+                    labelPingStatus.ForeColor = ping < 50 ? Color.LimeGreen : ping < 100 ? Color.Green : ping < 150 ? Color.Orange : Color.Red;
+                }
+                else
+                {
+                    labelCurrentPing.Text = "Ping test failed";
+                    labelPingStatus.Text = "Unable to test";
+                    labelPingStatus.ForeColor = Color.Red;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Ping test error: {ex.Message}");
+                labelCurrentPing.Text = "Ping test error";
+                labelPingStatus.Text = "Test failed";
+                labelPingStatus.ForeColor = Color.Red;
+            }
+        }
+
         private void StatusUpdateTimer_Tick(object sender, EventArgs e)
         {
-            // Fixed: Use Task.Run instead of discard pattern
             Task.Run(async () => await UpdateOptimizationStatus());
         }
 
@@ -171,7 +202,8 @@ namespace PCOptimizer
                 "• Network latency reductions\n" +
                 "• Windows gaming enhancements\n" +
                 "• System service optimizations\n" +
-                "• Power management tweaks\n\n" +
+                "• Power management tweaks\n" +
+                "• Ping optimization tweaks\n\n" +
                 "A system backup will be created first. Continue?",
                 "Optimize for Maximum FPS",
                 MessageBoxButtons.YesNo,
@@ -190,15 +222,31 @@ namespace PCOptimizer
                 SetUIState(false, "Optimizing for maximum FPS...");
                 LogMessage("Starting comprehensive FPS optimization...");
 
+                // Test ping before optimization
+                int pingBefore = await optimizationEngine.TestCurrentPing();
+                LogMessage($"Ping before optimization: {(pingBefore > 0 ? pingBefore + "ms" : "Unable to test")}");
+
                 var result = await optimizationEngine.OptimizeForMaximumFPS();
 
                 if (result.Success)
                 {
+                    // Test ping after optimization
+                    await Task.Delay(2000); // Wait for changes to take effect
+                    int pingAfter = await optimizationEngine.TestCurrentPing();
+
+                    string pingImprovement = "";
+                    if (pingBefore > 0 && pingAfter > 0)
+                    {
+                        int improvement = pingBefore - pingAfter;
+                        pingImprovement = $"\nPing: {pingBefore}ms → {pingAfter}ms ({(improvement > 0 ? $"-{improvement}ms" : $"+{Math.Abs(improvement)}ms")})";
+                    }
+
                     LogMessage($"FPS optimization completed successfully! Applied {result.OptimizationsApplied} optimizations.");
                     MessageBox.Show(
                         $"FPS optimization completed successfully!\n\n" +
                         $"Optimizations applied: {result.OptimizationsApplied}\n" +
-                        $"Backup created: {(result.BackupCreated ? "Yes" : "No")}\n\n" +
+                        $"Backup created: {(result.BackupCreated ? "Yes" : "No")}" +
+                        pingImprovement + "\n\n" +
                         "Restart your computer for all changes to take effect.",
                         "Optimization Complete",
                         MessageBoxButtons.OK,
@@ -229,6 +277,7 @@ namespace PCOptimizer
                 }
 
                 await UpdateOptimizationStatus();
+                await TestCurrentPing(); // Update ping display
             }
             catch (Exception ex)
             {
@@ -268,7 +317,16 @@ namespace PCOptimizer
             await PerformSpecificOptimization("Network", async () =>
             {
                 LogMessage("Applying network latency optimizations...");
-                return await optimizationEngine.OptimizeNetworkForGaming();
+                bool result = await optimizationEngine.OptimizeNetworkForGaming();
+
+                // Test ping after network optimization
+                if (result)
+                {
+                    await Task.Delay(1000);
+                    await TestCurrentPing();
+                }
+
+                return result;
             });
         }
 
@@ -412,6 +470,14 @@ namespace PCOptimizer
             SetUIState(true, "Ready");
         }
 
+        private async void BtnTestPing_Click(object sender, EventArgs e)
+        {
+            SetUIState(false, "Testing ping...");
+            await TestCurrentPing();
+            LogMessage("Ping test completed.");
+            SetUIState(true, "Ready");
+        }
+
         private void SetUIState(bool enabled, string statusMessage)
         {
             // Enable/disable buttons
@@ -422,6 +488,7 @@ namespace PCOptimizer
             btnCreateBackup.Enabled = enabled;
             btnRestoreBackup.Enabled = enabled;
             btnCheckStatus.Enabled = enabled;
+            btnTestPing.Enabled = enabled;
 
             // Update progress bar
             if (enabled)
@@ -467,10 +534,10 @@ namespace PCOptimizer
             this.SuspendLayout();
 
             // Form properties
-            this.AutoScaleDimensions = new SizeF(6F, 13F); // Fixed for .NET Framework 4.8
+            this.AutoScaleDimensions = new SizeF(6F, 13F);
             this.AutoScaleMode = AutoScaleMode.Font;
             this.BackColor = Color.FromArgb(32, 32, 32);
-            this.ClientSize = new Size(1000, 750);
+            this.ClientSize = new Size(1000, 800);
             this.ForeColor = Color.White;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
@@ -535,25 +602,58 @@ namespace PCOptimizer
             groupSystemInfo.Controls.Add(labelSystemInfo);
             this.Controls.Add(groupSystemInfo);
 
+            // Ping Status Group
+            groupPing = new GroupBox
+            {
+                Text = "Network Ping Status",
+                ForeColor = Color.White,
+                Location = new Point(520, 120),
+                Size = new Size(230, 120)
+            };
+
+            labelCurrentPing = new Label
+            {
+                Text = "Testing ping...",
+                Location = new Point(10, 25),
+                Size = new Size(210, 20),
+                ForeColor = Color.White
+            };
+            groupPing.Controls.Add(labelCurrentPing);
+
+            labelPingStatus = new Label
+            {
+                Text = "Please wait...",
+                Location = new Point(10, 50),
+                Size = new Size(210, 20),
+                ForeColor = Color.Yellow,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold)
+            };
+            groupPing.Controls.Add(labelPingStatus);
+
+            btnTestPing = CreateStyledButton("Test Ping", new Point(10, 80), new Size(100, 25));
+            btnTestPing.Click += BtnTestPing_Click;
+            groupPing.Controls.Add(btnTestPing);
+            this.Controls.Add(groupPing);
+
             // Optimization Status
             groupStatus = new GroupBox
             {
                 Text = "Optimization Status",
                 ForeColor = Color.White,
-                Location = new Point(520, 120),
-                Size = new Size(460, 120)
+                Location = new Point(770, 120),
+                Size = new Size(210, 120)
             };
 
             labelOptimizationStatus = new Label
             {
                 Text = "Checking optimization status...",
                 Location = new Point(10, 25),
-                Size = new Size(440, 80),
+                Size = new Size(190, 60),
                 ForeColor = Color.Yellow
             };
             groupStatus.Controls.Add(labelOptimizationStatus);
 
-            btnCheckStatus = CreateStyledButton("Refresh Status", new Point(350, 85), new Size(100, 25));
+            btnCheckStatus = CreateStyledButton("Refresh Status", new Point(10, 85), new Size(120, 25));
             btnCheckStatus.Click += BtnCheckStatus_Click;
             groupStatus.Controls.Add(btnCheckStatus);
             this.Controls.Add(groupStatus);
@@ -561,7 +661,7 @@ namespace PCOptimizer
             // Main Optimizations
             groupOptimizations = new GroupBox
             {
-                Text = "FPS Optimizations",
+                Text = "FPS & Ping Optimizations",
                 ForeColor = Color.White,
                 Location = new Point(20, 260),
                 Size = new Size(960, 120)
@@ -570,28 +670,28 @@ namespace PCOptimizer
             // Main FPS optimization button
             btnOptimizeForFPS = new Button
             {
-                Text = "🚀 OPTIMIZE FOR MAXIMUM FPS",
+                Text = "🚀 OPTIMIZE FOR MAXIMUM FPS & LOW PING",
                 Location = new Point(20, 30),
-                Size = new Size(300, 50),
+                Size = new Size(350, 50),
                 BackColor = Color.FromArgb(0, 180, 0),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 12, FontStyle.Bold)
+                Font = new Font("Segoe UI", 11, FontStyle.Bold)
             };
             btnOptimizeForFPS.FlatAppearance.BorderSize = 0;
             btnOptimizeForFPS.Click += BtnOptimizeForFPS_Click;
             groupOptimizations.Controls.Add(btnOptimizeForFPS);
 
             // Individual optimization buttons
-            btnOptimizeWindows = CreateStyledButton("Optimize Windows", new Point(350, 30));
+            btnOptimizeWindows = CreateStyledButton("Optimize Windows", new Point(400, 30));
             btnOptimizeWindows.Click += BtnOptimizeWindows_Click;
             groupOptimizations.Controls.Add(btnOptimizeWindows);
 
-            btnOptimizeGraphics = CreateStyledButton("Optimize Graphics", new Point(530, 30));
+            btnOptimizeGraphics = CreateStyledButton("Optimize Graphics", new Point(580, 30));
             btnOptimizeGraphics.Click += BtnOptimizeGraphics_Click;
             groupOptimizations.Controls.Add(btnOptimizeGraphics);
 
-            btnOptimizeNetwork = CreateStyledButton("Optimize Network", new Point(710, 30));
+            btnOptimizeNetwork = CreateStyledButton("Optimize Network", new Point(760, 30));
             btnOptimizeNetwork.Click += BtnOptimizeNetwork_Click;
             groupOptimizations.Controls.Add(btnOptimizeNetwork);
 
@@ -622,13 +722,13 @@ namespace PCOptimizer
                 Text = "Activity Log",
                 ForeColor = Color.White,
                 Location = new Point(520, 400),
-                Size = new Size(460, 280)
+                Size = new Size(460, 300)
             };
 
             logTextBox = new RichTextBox
             {
                 Location = new Point(10, 25),
-                Size = new Size(440, 240),
+                Size = new Size(440, 260),
                 BackColor = Color.FromArgb(45, 45, 45),
                 ForeColor = Color.White,
                 Font = new Font("Consolas", 9),
@@ -641,24 +741,24 @@ namespace PCOptimizer
             // Progress Bar
             progressBarMain = new ProgressBar
             {
-                Location = new Point(20, 700),
+                Location = new Point(20, 720),
                 Size = new Size(480, 30),
                 Style = ProgressBarStyle.Blocks
             };
             this.Controls.Add(progressBarMain);
 
-            // Gaming Tips Panel
+            // Enhanced Gaming Tips Panel
             var tipsPanel = new Panel
             {
                 Location = new Point(20, 500),
-                Size = new Size(480, 180),
+                Size = new Size(480, 200),
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = Color.FromArgb(45, 45, 45)
             };
 
             var tipsLabel = new Label
             {
-                Text = "🎮 Gaming Performance Tips",
+                Text = "🎮 Gaming Performance & Ping Reduction Tips",
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 150, 255),
                 Location = new Point(10, 10),
@@ -670,16 +770,18 @@ namespace PCOptimizer
             {
                 Text = "• Close unnecessary programs before gaming\n" +
                        "• Update graphics drivers regularly\n" +
+                       "• Use wired connection instead of WiFi for best ping\n" +
                        "• Use fullscreen mode instead of windowed\n" +
                        "• Lower in-game graphics settings if needed\n" +
                        "• Keep Windows and games updated\n" +
                        "• Monitor temperatures during gaming\n" +
                        "• Use Game Mode in Windows 10/11\n" +
-                       "• Consider upgrading RAM if using <16GB",
-                Font = new Font("Segoe UI", 9),
+                       "• Consider upgrading RAM if using <16GB\n" +
+                       "• Use faster DNS servers (1.1.1.1 or 8.8.8.8)",
+                Font = new Font("Segoe UI", 8.5f),
                 ForeColor = Color.White,
                 Location = new Point(10, 35),
-                Size = new Size(460, 135)
+                Size = new Size(460, 155)
             };
             tipsPanel.Controls.Add(tipsContent);
             this.Controls.Add(tipsPanel);
@@ -725,7 +827,7 @@ namespace PCOptimizer
         {
             var toolTip = new ToolTip();
             toolTip.SetToolTip(btnOptimizeForFPS,
-                "Apply comprehensive FPS optimizations including CPU, memory, graphics, and network tweaks");
+                "Apply comprehensive FPS and ping optimizations including CPU, memory, graphics, and network tweaks");
             toolTip.SetToolTip(btnOptimizeWindows,
                 "Optimize Windows settings for better gaming performance");
             toolTip.SetToolTip(btnOptimizeGraphics,
@@ -738,6 +840,8 @@ namespace PCOptimizer
                 "Restore your system to the state before optimizations were applied");
             toolTip.SetToolTip(btnCheckStatus,
                 "Check current optimization status and refresh display");
+            toolTip.SetToolTip(btnTestPing,
+                "Test your current ping to Google servers");
         }
 
         private void AddEventHandlers()
@@ -761,7 +865,6 @@ namespace PCOptimizer
             };
             button.FlatAppearance.BorderSize = 0;
 
-            // Fixed: Use proper EventHandler casting
             button.MouseEnter += new EventHandler((s, e) => button.BackColor = Color.FromArgb(30, 140, 235));
             button.MouseLeave += new EventHandler((s, e) => button.BackColor = Color.FromArgb(0, 120, 215));
 

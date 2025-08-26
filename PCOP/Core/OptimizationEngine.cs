@@ -1,4 +1,4 @@
-﻿// OptimizationEngine.cs - Fixed version with all missing methods
+﻿// OptimizationEngine.cs - Enhanced version with advanced optimizations and game-specific tweaks
 using System;
 using System.IO;
 using System.Diagnostics;
@@ -45,7 +45,8 @@ namespace PCOptimizer
                     OptimizeServicesForGaming(),
                     OptimizePowerForGaming(),
                     OptimizeStorageForGaming(),
-                    ApplyGameSpecificOptimizations()
+                    ApplyGameSpecificOptimizations(),
+                    OptimizeForLowPing() // Added ping optimization
                 };
 
                 var results = await Task.WhenAll(tasks);
@@ -71,7 +72,127 @@ namespace PCOptimizer
             return result;
         }
 
-        // Missing methods that MainForm expects
+        // Enhanced ping optimization method
+        private async Task<bool> OptimizeForLowPing()
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    // TCP/IP stack optimizations for minimum latency
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters",
+                        "MaxUserPort", 65534); // Increase available ports
+
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters",
+                        "TcpTimedWaitDelay", 30); // Reduce TIME_WAIT delay
+
+                    // Disable TCP chimney offload (can increase latency)
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters",
+                        "EnableTCPChimney", 0);
+
+                    // Optimize network buffer sizes
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters",
+                        "DefaultReceiveWindow", 256960); // 256KB receive window
+
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters",
+                        "DefaultSendWindow", 256960); // 256KB send window
+
+                    // Disable large send offload (LSO) - can cause micro-lag
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters",
+                        "DisableTaskOffload", 1);
+
+                    // Gaming-specific network optimizations
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters",
+                        "EnablePMTUDiscovery", 1); // Enable Path MTU Discovery
+
+                    // QoS optimizations for gaming traffic
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Psched",
+                        "NonBestEffortLimit", 0); // Remove QoS bandwidth limit
+
+                    // Disable Windows scaling heuristics (can increase latency)
+                    ExecuteNetshCommand("int tcp set global autotuninglevel=disabled");
+
+                    // Set interrupt moderation for network adapters
+                    OptimizeNetworkInterrupts();
+
+                    // DNS optimizations
+                    OptimizeDNSSettings();
+
+                    return true;
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            });
+        }
+
+        private void OptimizeNetworkInterrupts()
+        {
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher(
+                    "SELECT * FROM Win32_NetworkAdapter WHERE NetEnabled=true AND AdapterTypeId=0"))
+                {
+                    foreach (ManagementObject adapter in searcher.Get())
+                    {
+                        string deviceId = adapter["DeviceID"]?.ToString();
+                        if (!string.IsNullOrEmpty(deviceId))
+                        {
+                            string adapterKey = $@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{{4d36e972-e325-11ce-bfc1-08002be10318}}\{deviceId.PadLeft(4, '0')}";
+
+                            // Optimize interrupt settings for gaming
+                            SetRegistryValue(adapterKey, "*InterruptModeration", "Disabled");
+                            SetRegistryValue(adapterKey, "ITR", "0"); // Intel adapters
+                            SetRegistryValue(adapterKey, "*ReceiveBuffers", "2048");
+                            SetRegistryValue(adapterKey, "*TransmitBuffers", "2048");
+
+                            // Disable power saving features
+                            SetRegistryValue(adapterKey, "*EEE", "0"); // Energy Efficient Ethernet
+                            SetRegistryValue(adapterKey, "*WakeOnPattern", "0");
+                            SetRegistryValue(adapterKey, "*WakeOnMagicPacket", "0");
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void OptimizeDNSSettings()
+        {
+            try
+            {
+                // Set faster DNS servers (Cloudflare and Google)
+                ExecuteNetshCommand("interface ip set dns \"Wi-Fi\" static 1.1.1.1 primary");
+                ExecuteNetshCommand("interface ip add dns \"Wi-Fi\" 8.8.8.8 index=2");
+                ExecuteNetshCommand("interface ip set dns \"Ethernet\" static 1.1.1.1 primary");
+                ExecuteNetshCommand("interface ip add dns \"Ethernet\" 8.8.8.8 index=2");
+
+                // Flush DNS cache
+                ExecuteScriptCommand("ipconfig /flushdns");
+            }
+            catch { }
+        }
+
+        // Test current ping method
+        public async Task<int> TestCurrentPing(string hostname = "google.com")
+        {
+            try
+            {
+                using (var ping = new System.Net.NetworkInformation.Ping())
+                {
+                    var reply = await ping.SendPingAsync(hostname, 5000);
+                    return reply.Status == System.Net.NetworkInformation.IPStatus.Success
+                        ? (int)reply.RoundtripTime
+                        : -1;
+                }
+            }
+            catch
+            {
+                return -1;
+            }
+        }
+
         public async Task<bool> OptimizeWindowsForGaming()
         {
             return await Task.Run(() =>
@@ -529,8 +650,8 @@ namespace PCOptimizer
                     // Audio optimizations for competitive gaming
                     SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Multimedia\Audio", "UserSimulatedStereoOn", 0);
 
-                    // Create game-specific launch optimizations
-                    CreateRustOptimizationScript();
+                    // Create game-specific optimizations
+                    CreateGameOptimizations();
 
                     return true;
                 }
@@ -539,6 +660,21 @@ namespace PCOptimizer
                     return false;
                 }
             });
+        }
+
+        private void CreateGameOptimizations()
+        {
+            // Rust optimizations
+            CreateRustOptimizations();
+
+            // Fortnite optimizations
+            CreateFortniteOptimizations();
+
+            // Rainbow Six Siege optimizations
+            CreateR6SiegeOptimizations();
+
+            // Valorant optimizations
+            CreateValorantOptimizations();
         }
 
         private void CreateRustOptimizationScript()
@@ -574,6 +710,158 @@ namespace PCOptimizer
 
                         File.WriteAllLines(scriptPath, optimizationScript);
                     }
+                }
+            }
+            catch { }
+        }
+
+        private void CreateRustOptimizations()
+        {
+            CreateRustOptimizationScript();
+
+            // Rust-specific registry optimizations
+            SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games",
+                "GPU Priority", 8);
+            SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games",
+                "Priority", 6);
+            SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games",
+                "Scheduling Category", "High");
+        }
+
+        private void CreateFortniteOptimizations()
+        {
+            try
+            {
+                string epicGamesPath = FindEpicGamesPath();
+                if (!string.IsNullOrEmpty(epicGamesPath))
+                {
+                    string fortnitePath = Path.Combine(epicGamesPath, "Fortnite");
+                    if (Directory.Exists(fortnitePath))
+                    {
+                        // Fortnite GameUserSettings.ini optimizations
+                        string gameUserSettings = Path.Combine(fortnitePath, "FortniteGame", "Saved", "Config", "WindowsClient", "GameUserSettings.ini");
+
+                        var fortniteSettings = new Dictionary<string, string>
+                        {
+                            ["FrameRateLimit"] = "0.000000", // Unlimited FPS
+                            ["bUseVSync"] = "False",
+                            ["ResolutionSizeX"] = "1920", // Adjust as needed
+                            ["ResolutionSizeY"] = "1080",
+                            ["WindowPosX"] = "0",
+                            ["WindowPosY"] = "0",
+                            ["FullscreenMode"] = "1", // Fullscreen
+                            ["PreferredFullscreenMode"] = "1",
+                            ["bUseDynamicResolution"] = "False",
+                            ["MobileFPSMode"] = "0",
+                            ["MobileQualitySettings"] = "0"
+                        };
+
+                        ApplyINISettings(gameUserSettings, "[ScalabilityGroups]", new Dictionary<string, string>
+                        {
+                            ["sg.ResolutionQuality"] = "100", // Native resolution
+                            ["sg.ViewDistanceQuality"] = "3", // Epic for competitive advantage
+                            ["sg.AntiAliasingQuality"] = "0", // Off for max FPS
+                            ["sg.ShadowQuality"] = "0", // Low/Off
+                            ["sg.PostProcessQuality"] = "0", // Low
+                            ["sg.TextureQuality"] = "3", // High for enemy visibility
+                            ["sg.EffectsQuality"] = "0", // Low
+                            ["sg.FoliageQuality"] = "0" // Low for better visibility
+                        });
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void CreateR6SiegeOptimizations()
+        {
+            try
+            {
+                string ubisoftPath = FindUbisoftPath();
+                if (!string.IsNullOrEmpty(ubisoftPath))
+                {
+                    string siegePath = Path.Combine(ubisoftPath, "Tom Clancy's Rainbow Six Siege");
+                    if (Directory.Exists(siegePath))
+                    {
+                        // R6 Siege launch parameters optimization
+                        string launchScript = Path.Combine(siegePath, "r6_optimized.bat");
+                        string[] launchOptions = {
+                            "@echo off",
+                            "echo Rainbow Six Siege FPS Optimizer",
+                            "REM Set high priority and CPU affinity",
+                            "start /high /affinity FF RainbowSix.exe -vulkan -high -malloc=system",
+                            "echo R6 Siege launched with optimizations!"
+                        };
+                        File.WriteAllLines(launchScript, launchOptions);
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void CreateValorantOptimizations()
+        {
+            try
+            {
+                // Valorant registry optimizations
+                SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR",
+                    "GameDVR_Enabled", 0); // Disable Game DVR for Vanguard compatibility
+
+                // Disable fullscreen optimizations for Valorant
+                string riotGamesPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Riot Games", "Riot Client");
+                if (Directory.Exists(riotGamesPath))
+                {
+                    // Create Valorant-specific optimizations - anti-cheat friendly
+                }
+            }
+            catch { }
+        }
+
+        private string FindEpicGamesPath()
+        {
+            string[] commonPaths = {
+                @"C:\Program Files\Epic Games",
+                @"C:\Program Files (x86)\Epic Games",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Epic Games")
+            };
+            return commonPaths.FirstOrDefault(Directory.Exists);
+        }
+
+        private string FindUbisoftPath()
+        {
+            string[] commonPaths = {
+                @"C:\Program Files\Ubisoft\Ubisoft Game Launcher\games",
+                @"C:\Program Files (x86)\Ubisoft\Ubisoft Game Launcher\games",
+                @"C:\Program Files\UbisoftConnect\games"
+            };
+            return commonPaths.FirstOrDefault(Directory.Exists);
+        }
+
+        private void ApplyINISettings(string filePath, string section, Dictionary<string, string> settings)
+        {
+            try
+            {
+                if (!File.Exists(filePath)) return;
+
+                var lines = File.ReadAllLines(filePath).ToList();
+                int sectionIndex = lines.FindIndex(l => l.Trim().Equals(section, StringComparison.OrdinalIgnoreCase));
+
+                if (sectionIndex >= 0)
+                {
+                    foreach (var setting in settings)
+                    {
+                        int settingIndex = lines.FindIndex(sectionIndex, l => l.StartsWith(setting.Key + "="));
+                        if (settingIndex >= 0)
+                        {
+                            lines[settingIndex] = $"{setting.Key}={setting.Value}";
+                        }
+                        else
+                        {
+                            lines.Insert(sectionIndex + 1, $"{setting.Key}={setting.Value}");
+                        }
+                    }
+                    File.WriteAllLines(filePath, lines);
                 }
             }
             catch { }
