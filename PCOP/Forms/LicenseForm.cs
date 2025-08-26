@@ -1,4 +1,4 @@
-﻿// LicenseForm.cs - Fixed and complete implementation
+﻿// LicenseForm.cs - Clean integration without trial mode
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -12,7 +12,7 @@ namespace PCOptimizer
         private LicenseManager licenseManager;
 
         private TextBox textBoxLicenseKey;
-        private Button btnValidate, btnTrial, btnCancel;
+        private Button btnValidate, btnCancel, btnPurchase;
         private Label labelStatus, labelHardwareId, labelTitle;
         private ProgressBar progressValidation;
         private Panel panelLicense;
@@ -91,17 +91,33 @@ namespace PCOptimizer
             labelHardwareId.Font = new Font("Segoe UI", 8);
             panelLicense.Controls.Add(labelHardwareId);
 
+            // Copy Hardware ID button
+            Button btnCopyHardwareId = new Button();
+            btnCopyHardwareId.Text = "Copy";
+            btnCopyHardwareId.Location = new Point(350, 100);
+            btnCopyHardwareId.Size = new Size(70, 20);
+            btnCopyHardwareId.BackColor = Color.FromArgb(80, 80, 80);
+            btnCopyHardwareId.ForeColor = Color.White;
+            btnCopyHardwareId.FlatStyle = FlatStyle.Flat;
+            btnCopyHardwareId.FlatAppearance.BorderSize = 0;
+            btnCopyHardwareId.Font = new Font("Segoe UI", 8);
+            btnCopyHardwareId.Click += (s, e) => {
+                Clipboard.SetText(licenseManager.GetHardwareId());
+                MessageBox.Show("Hardware ID copied to clipboard!", "Copied", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+            panelLicense.Controls.Add(btnCopyHardwareId);
+
             // Status label
             labelStatus = new Label();
             labelStatus.Text = "Enter a valid license key to continue";
-            labelStatus.Location = new Point(20, 110);
+            labelStatus.Location = new Point(20, 130);
             labelStatus.Size = new Size(400, 40);
             labelStatus.ForeColor = Color.Yellow;
             panelLicense.Controls.Add(labelStatus);
 
             // Progress bar
             progressValidation = new ProgressBar();
-            progressValidation.Location = new Point(20, 160);
+            progressValidation.Location = new Point(20, 170);
             progressValidation.Size = new Size(400, 20);
             progressValidation.Style = ProgressBarStyle.Marquee;
             progressValidation.Visible = false;
@@ -122,20 +138,20 @@ namespace PCOptimizer
             btnValidate.Click += BtnValidate_Click;
             this.Controls.Add(btnValidate);
 
-            btnTrial = new Button();
-            btnTrial.Text = "7-Day Trial";
-            btnTrial.Location = new Point(160, 280);
-            btnTrial.Size = new Size(100, 35);
-            btnTrial.BackColor = Color.FromArgb(80, 80, 80);
-            btnTrial.ForeColor = Color.White;
-            btnTrial.FlatStyle = FlatStyle.Flat;
-            btnTrial.FlatAppearance.BorderSize = 0;
-            btnTrial.Click += BtnTrial_Click;
-            this.Controls.Add(btnTrial);
+            btnPurchase = new Button();
+            btnPurchase.Text = "Purchase License";
+            btnPurchase.Location = new Point(160, 280);
+            btnPurchase.Size = new Size(120, 35);
+            btnPurchase.BackColor = Color.FromArgb(0, 150, 0);
+            btnPurchase.ForeColor = Color.White;
+            btnPurchase.FlatStyle = FlatStyle.Flat;
+            btnPurchase.FlatAppearance.BorderSize = 0;
+            btnPurchase.Click += BtnPurchase_Click;
+            this.Controls.Add(btnPurchase);
 
             btnCancel = new Button();
             btnCancel.Text = "Cancel";
-            btnCancel.Location = new Point(280, 280);
+            btnCancel.Location = new Point(300, 280);
             btnCancel.Size = new Size(100, 35);
             btnCancel.BackColor = Color.FromArgb(100, 100, 100);
             btnCancel.ForeColor = Color.White;
@@ -146,7 +162,7 @@ namespace PCOptimizer
 
             // Additional info
             Label labelInfo = new Label();
-            labelInfo.Text = "Need a license? Visit our website or contact support.";
+            labelInfo.Text = "Need a license? Click 'Purchase License' or visit our website for support.";
             labelInfo.Location = new Point(20, 325);
             labelInfo.Size = new Size(400, 15);
             labelInfo.ForeColor = Color.LightGray;
@@ -193,7 +209,7 @@ namespace PCOptimizer
 
             // Disable controls during validation
             btnValidate.Enabled = false;
-            btnTrial.Enabled = false;
+            btnPurchase.Enabled = false;
             textBoxLicenseKey.Enabled = false;
             progressValidation.Visible = true;
 
@@ -202,12 +218,12 @@ namespace PCOptimizer
 
             try
             {
-                // Simulate validation delay
-                await Task.Delay(2000);
+                // Simulate validation delay for UX
+                await Task.Delay(1000);
 
-                bool isValid = await licenseManager.ValidateLicenseOnline(licenseKey);
+                var result = await licenseManager.ValidateLicenseAsync(licenseKey);
 
-                if (isValid)
+                if (result.IsValid)
                 {
                     labelStatus.Text = "License activated successfully!";
                     labelStatus.ForeColor = Color.LimeGreen;
@@ -218,12 +234,16 @@ namespace PCOptimizer
                 }
                 else
                 {
-                    labelStatus.Text = "Invalid license key. Please check and try again.";
+                    labelStatus.Text = $"License validation failed: {result.ErrorMessage}";
                     labelStatus.ForeColor = Color.Red;
+
+                    // Show detailed error message
+                    MessageBox.Show($"License validation failed:\n\n{result.ErrorMessage}\n\nPlease check your license key and internet connection.",
+                        "Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                     // Re-enable controls
                     btnValidate.Enabled = true;
-                    btnTrial.Enabled = true;
+                    btnPurchase.Enabled = true;
                     textBoxLicenseKey.Enabled = true;
                 }
             }
@@ -232,9 +252,12 @@ namespace PCOptimizer
                 labelStatus.Text = $"Validation error: {ex.Message}";
                 labelStatus.ForeColor = Color.Red;
 
+                MessageBox.Show($"An error occurred during validation:\n\n{ex.Message}",
+                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
                 // Re-enable controls
                 btnValidate.Enabled = true;
-                btnTrial.Enabled = true;
+                btnPurchase.Enabled = true;
                 textBoxLicenseKey.Enabled = true;
             }
             finally
@@ -243,48 +266,31 @@ namespace PCOptimizer
             }
         }
 
-        private void BtnTrial_Click(object sender, EventArgs e)
+        private void BtnPurchase_Click(object sender, EventArgs e)
         {
-            DialogResult result = MessageBox.Show(
-                "Start a 7-day free trial? Some features may be limited during the trial period.",
-                "Trial Mode", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            // Show purchase information
+            MessageBox.Show(
+                "To purchase a license:\n\n" +
+                "1. Visit our website: [Your Website URL]\n" +
+                "2. Contact support: [Your Email]\n" +
+                "3. Include your Hardware ID for license generation\n\n" +
+                $"Your Hardware ID: {licenseManager.GetHardwareId()}\n\n" +
+                "The Hardware ID has been copied to your clipboard.",
+                "Purchase License",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
 
-            if (result == DialogResult.Yes)
-            {
-                // Set trial mode
-                SetTrialMode();
-                this.DialogResult = DialogResult.OK;
-                this.Close();
-            }
+            // Copy hardware ID to clipboard for easy sharing
+            Clipboard.SetText(licenseManager.GetHardwareId());
+
+            // Optionally open website
+            // System.Diagnostics.Process.Start("https://yourwebsite.com/purchase");
         }
 
         private void BtnCancel_Click(object sender, EventArgs e)
         {
             this.DialogResult = DialogResult.Cancel;
             this.Close();
-        }
-
-        private void SetTrialMode()
-        {
-            try
-            {
-                // Set trial expiration date
-                DateTime trialExpiry = DateTime.Now.AddDays(7);
-
-                using (Microsoft.Win32.RegistryKey key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey("Software\\PCOptimizer"))
-                {
-                    key.SetValue("TrialExpiry", trialExpiry.ToBinary());
-                    key.SetValue("TrialMode", true);
-                }
-
-                MessageBox.Show("Trial mode activated! You have 7 days to evaluate the software.",
-                    "Trial Activated", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error setting trial mode: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
         }
 
         protected override void Dispose(bool disposing)

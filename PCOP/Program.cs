@@ -1,4 +1,4 @@
-﻿// Program.cs - Complete updated version with licensing enforcement and admin check
+﻿// Program.cs - Clean licensing without trial mode
 using System;
 using System.Windows.Forms;
 using System.Diagnostics;
@@ -59,6 +59,14 @@ namespace PCOptimizer
                                 // User canceled licensing - exit
                                 return;
                             }
+                        }
+
+                        // Verify license was actually validated
+                        if (!CheckInitialLicense())
+                        {
+                            MessageBox.Show("License validation is required to use this software.",
+                                "License Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
                         }
                     }
 
@@ -138,12 +146,6 @@ namespace PCOptimizer
         {
             try
             {
-                // Check for trial mode first
-                if (IsTrialValid())
-                {
-                    return true;
-                }
-
                 // Check for valid license
                 using (var licenseManager = new LicenseManager())
                 {
@@ -155,29 +157,6 @@ namespace PCOptimizer
             {
                 return false;
             }
-        }
-
-        private static bool IsTrialValid()
-        {
-            try
-            {
-                using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey("Software\\PCOptimizer"))
-                {
-                    if (key != null)
-                    {
-                        var trialMode = key.GetValue("TrialMode");
-                        var trialExpiry = key.GetValue("TrialExpiry");
-
-                        if (trialMode != null && (bool)trialMode && trialExpiry != null)
-                        {
-                            DateTime expiryDate = DateTime.FromBinary((long)trialExpiry);
-                            return DateTime.Now < expiryDate;
-                        }
-                    }
-                }
-            }
-            catch { }
-            return false;
         }
 
         private static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)

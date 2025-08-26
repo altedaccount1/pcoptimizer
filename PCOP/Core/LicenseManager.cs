@@ -1,4 +1,4 @@
-﻿// LicenseManager.cs - Updated with hardcoded test licenses for development
+﻿// LicenseManager.cs - Clean integration with server, no test licenses
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -15,39 +15,10 @@ namespace PCOptimizer.Security
 {
     public class LicenseManager : IDisposable
     {
-        private const string LICENSE_SERVER_URL = "https://pcoptimizer-licensing-gvema2b0d0g0b9et.eastus-01.azurewebsites.net/api/license";
+        private const string LICENSE_SERVER_URL = "https://pcoptimzer-licensing-gvema2b0d0g0b9et.eastus-01.azurewebsites.net/api/license";
         private const string REGISTRY_KEY = @"SOFTWARE\PCOptimizer";
         private const string LICENSE_VALUE = "SecureLicense";
         private const string HARDWARE_VALUE = "HardwareFingerprint";
-
-        // HARDCODED TEST LICENSES (Remove in production)
-        private static readonly Dictionary<string, TestLicense> TEST_LICENSES = new Dictionary<string, TestLicense>
-        {
-            ["PCOPT-TEST-2024-DEMO-001"] = new TestLicense
-            {
-                CustomerName = "Test User",
-                ExpirationDate = DateTime.Now.AddDays(30),
-                IsValid = true
-            },
-            ["PCOPT-DEV-2024-UNLIMITED"] = new TestLicense
-            {
-                CustomerName = "Developer",
-                ExpirationDate = DateTime.Now.AddYears(10),
-                IsValid = true
-            },
-            ["PCOPT-TRIAL-2024-WEEK"] = new TestLicense
-            {
-                CustomerName = "Trial User",
-                ExpirationDate = DateTime.Now.AddDays(7),
-                IsValid = true
-            },
-            ["PCOPT-PREMIUM-2024-YEAR"] = new TestLicense
-            {
-                CustomerName = "Premium User",
-                ExpirationDate = DateTime.Now.AddYears(1),
-                IsValid = true
-            }
-        };
 
         private string hardwareFingerprint;
         private LicenseInfo currentLicense;
@@ -78,49 +49,20 @@ namespace PCOptimizer.Security
                     };
                 }
 
-                // Check hardcoded test licenses first (for development)
-                if (TEST_LICENSES.ContainsKey(keyToValidate))
+                // Try online validation first
+                var onlineResult = await ValidateOnlineAsync(keyToValidate);
+                if (onlineResult.IsValid)
                 {
-                    var testLicense = TEST_LICENSES[keyToValidate];
-                    if (testLicense.IsValid && DateTime.Now < testLicense.ExpirationDate)
-                    {
-                        var licenseInfo = new LicenseInfo
-                        {
-                            LicenseKey = keyToValidate,
-                            CustomerName = testLicense.CustomerName,
-                            ExpirationDate = testLicense.ExpirationDate,
-                            ValidationDate = DateTime.UtcNow
-                        };
-
-                        StoreLicenseSecurely(licenseInfo);
-                        currentLicense = licenseInfo;
-
-                        return new LicenseValidationResult
-                        {
-                            IsValid = true,
-                            LicenseInfo = licenseInfo
-                        };
-                    }
-                    else
-                    {
-                        return new LicenseValidationResult
-                        {
-                            IsValid = false,
-                            ErrorMessage = "Test license has expired"
-                        };
-                    }
+                    return onlineResult;
                 }
 
-                // Try online validation if not a test license
-                return await ValidateOnlineAsync(keyToValidate);
+                // If online validation fails, try offline validation
+                return ValidateOffline(keyToValidate);
             }
             catch (Exception ex)
             {
-                return new LicenseValidationResult
-                {
-                    IsValid = false,
-                    ErrorMessage = $"Validation error: {ex.Message}"
-                };
+                // If validation fails completely, try offline
+                return ValidateOffline(licenseKey ?? currentLicense?.LicenseKey);
             }
         }
 
@@ -203,32 +145,29 @@ namespace PCOptimizer.Security
             }
         }
 
-        // Method to generate new test licenses (for development)
-        public static string GenerateTestLicense(string prefix = "PCOPT")
+        private LicenseValidationResult ValidateOffline(string licenseKey)
         {
-            string timestamp = DateTime.Now.ToString("yyyyMMdd");
-            string random = Guid.NewGuid().ToString("N")[..8].ToUpper();
-            return $"{prefix}-{timestamp}-{random}";
-        }
-
-        // Method to add temporary test license (for development)
-        public static void AddTestLicense(string licenseKey, string customerName, int validDays = 30)
-        {
-            TEST_LICENSES[licenseKey] = new TestLicense
+            // Allow offline validation for up to 7 days after last successful online validation
+            if (currentLicense != null &&
+                (licenseKey == null || currentLicense.LicenseKey == licenseKey) &&
+                DateTime.UtcNow < currentLicense.ExpirationDate &&
+                DateTime.UtcNow.Subtract(currentLicense.ValidationDate).TotalDays < 7)
             {
-                CustomerName = customerName,
-                ExpirationDate = DateTime.Now.AddDays(validDays),
-                IsValid = true
+                return new LicenseValidationResult
+                {
+                    IsValid = true,
+                    LicenseInfo = currentLicense,
+                    IsOfflineValidation = true
+                };
+            }
+
+            return new LicenseValidationResult
+            {
+                IsValid = false,
+                ErrorMessage = "License validation required - please check internet connection"
             };
         }
 
-        // Get all available test licenses (for development UI)
-        public static Dictionary<string, TestLicense> GetTestLicenses()
-        {
-            return new Dictionary<string, TestLicense>(TEST_LICENSES);
-        }
-
-        // Rest of the original methods...
         public async Task<bool> ValidateLicenseOnline(string licenseKey)
         {
             var result = await ValidateLicenseAsync(licenseKey);
@@ -308,29 +247,6 @@ namespace PCOptimizer.Security
                 byte[] hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(combined + "PCOpt_Salt_2024"));
                 return Convert.ToBase64String(hash).Substring(0, 24);
             }
-        }
-
-        private LicenseValidationResult ValidateOffline(string licenseKey)
-        {
-            // Allow offline validation for up to 24 hours
-            if (currentLicense != null &&
-                (licenseKey == null || currentLicense.LicenseKey == licenseKey) &&
-                DateTime.UtcNow < currentLicense.ExpirationDate &&
-                DateTime.UtcNow.Subtract(currentLicense.ValidationDate).TotalHours < 24)
-            {
-                return new LicenseValidationResult
-                {
-                    IsValid = true,
-                    LicenseInfo = currentLicense,
-                    IsOfflineValidation = true
-                };
-            }
-
-            return new LicenseValidationResult
-            {
-                IsValid = false,
-                ErrorMessage = "License validation required - please check internet connection"
-            };
         }
 
         private void StoreLicenseSecurely(LicenseInfo licenseInfo)
@@ -510,15 +426,7 @@ namespace PCOptimizer.Security
         }
     }
 
-    // Test license class for development
-    public class TestLicense
-    {
-        public string CustomerName { get; set; } = "";
-        public DateTime ExpirationDate { get; set; }
-        public bool IsValid { get; set; }
-    }
-
-    // Existing data classes
+    // Data classes
     public class LicenseInfo
     {
         public string LicenseKey { get; set; } = "";
