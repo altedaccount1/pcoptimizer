@@ -1,4 +1,5 @@
-﻿using System;
+﻿// OptimizationEngine.cs - Fixed version with all missing methods
+using System;
 using System.IO;
 using System.Diagnostics;
 using System.ServiceProcess;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 using System.Management;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 
 namespace PCOptimizer
 {
@@ -48,7 +50,7 @@ namespace PCOptimizer
 
                 var results = await Task.WhenAll(tasks);
                 result.OptimizationsApplied = results.Count(r => r);
-                result.Success = results.All(r => r);
+                result.Success = results.Any(r => r); // Success if at least one optimization worked
 
                 if (result.Success)
                 {
@@ -67,6 +69,175 @@ namespace PCOptimizer
             }
 
             return result;
+        }
+
+        // Missing methods that MainForm expects
+        public async Task<bool> OptimizeWindowsForGaming()
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    // Enable Game Mode but disable notifications
+                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\GameBar", "AutoGameModeEnabled", 1);
+                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\GameBar", "AllowAutoGameMode", 1);
+                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\GameBar", "ShowStartupPanel", 0);
+
+                    // Disable Windows Update automatic restart
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers", 1);
+
+                    // Optimize visual effects for performance
+                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", 2);
+                    SetRegistryValue(@"HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics", "MinAnimate", "0");
+                    SetRegistryValue(@"HKEY_CURRENT_USER\Control Panel\Desktop", "MenuShowDelay", "0");
+
+                    // Disable unnecessary Windows features
+                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled", 1);
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config", "DODownloadMode", 0);
+
+                    // Optimize Windows timer resolution
+                    ExecuteBcdEditCommand("/set useplatformclock true");
+                    ExecuteBcdEditCommand("/set disabledynamictick yes");
+
+                    // Disable telemetry and diagnostics
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0);
+
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            });
+        }
+
+        public async Task<bool> OptimizeGraphicsForGaming()
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    // Enable Hardware Accelerated GPU Scheduling
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", 2);
+
+                    // Disable TDR (Timeout Detection and Recovery) for competitive gaming
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "TdrLevel", 0);
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "TdrDelay", 60);
+
+                    // Graphics driver specific optimizations
+                    if (systemInfo.IsNVIDIAGraphics())
+                    {
+                        OptimizeNVIDIASettings();
+                    }
+                    else if (systemInfo.IsAMDGraphics())
+                    {
+                        OptimizeAMDSettings();
+                    }
+
+                    // Disable Game DVR and other overlays
+                    SetRegistryValue(@"HKEY_CURRENT_USER\System\GameConfigStore", "GameDVR_Enabled", 0);
+                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR", "AppCaptureEnabled", 0);
+                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR", "GameDVR_Enabled", 0);
+
+                    // Optimize DWM (Desktop Window Manager) for gaming
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Dwm", "OverlayTestMode", 5);
+
+                    // Set GPU priority for games
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games", "GPU Priority", 8);
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games", "Priority", 6);
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games", "Scheduling Category", "High");
+
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            });
+        }
+
+        public async Task<bool> OptimizeNetworkForGaming()
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    // TCP optimizations for reduced latency
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "TcpAckFrequency", 1);
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "TCPNoDelay", 1);
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "TcpDelAckTicks", 0);
+
+                    // Disable Nagle's algorithm
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "TcpNoDelay", 1);
+
+                    // Network adapter optimizations
+                    OptimizeNetworkAdapters();
+
+                    // Windows network stack optimizations
+                    ExecuteNetshCommand("int tcp set global autotuninglevel=normal");
+                    ExecuteNetshCommand("int tcp set global chimney=enabled");
+                    ExecuteNetshCommand("int tcp set global rss=enabled");
+                    ExecuteNetshCommand("int tcp set global netdma=enabled");
+
+                    // Disable bandwidth throttling
+                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex", 0xffffffff);
+
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            });
+        }
+
+        public async Task<bool> CreateComprehensiveBackup()
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                    string backupFile = Path.Combine(backupPath, $"gaming_optimization_backup_{timestamp}");
+
+                    // Create backup directory
+                    Directory.CreateDirectory(backupFile);
+
+                    // Export critical registry keys
+                    var criticalKeys = new[]
+                    {
+                        "HKLM\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl",
+                        "HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers",
+                        "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters",
+                        "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management",
+                        "HKCU\\SOFTWARE\\Microsoft\\GameBar",
+                        "HKCU\\Control Panel\\Mouse",
+                        "HKCU\\Control Panel\\Keyboard"
+                    };
+
+                    foreach (var key in criticalKeys)
+                    {
+                        string fileName = key.Replace("\\", "_").Replace(":", "") + ".reg";
+                        string fullPath = Path.Combine(backupFile, fileName);
+                        ExecuteScriptCommand($"reg export \"{key}\" \"{fullPath}\"");
+                    }
+
+                    // Save current service states
+                    SaveCurrentServiceStates(Path.Combine(backupFile, "services.json"));
+
+                    // Save current power scheme
+                    SaveCurrentPowerScheme(Path.Combine(backupFile, "power_scheme.txt"));
+
+                    // Create system restore point
+                    ExecutePowerShellCommand("Checkpoint-Computer -Description 'Gaming Optimization Backup' -RestorePointType 'MODIFY_SETTINGS'");
+
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            });
         }
 
         private async Task<bool> OptimizeCPUForGaming()
@@ -140,51 +311,6 @@ namespace PCOptimizer
             });
         }
 
-        private async Task<bool> OptimizeGraphicsForGaming()
-        {
-            return await Task.Run(() =>
-            {
-                try
-                {
-                    // Enable Hardware Accelerated GPU Scheduling
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", 2);
-
-                    // Disable TDR (Timeout Detection and Recovery) for competitive gaming
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "TdrLevel", 0);
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "TdrDelay", 60);
-
-                    // Graphics driver specific optimizations
-                    if (systemInfo.IsNVIDIAGraphics())
-                    {
-                        OptimizeNVIDIASettings();
-                    }
-                    else if (systemInfo.IsAMDGraphics())
-                    {
-                        OptimizeAMDSettings();
-                    }
-
-                    // Disable Game DVR and other overlays
-                    SetRegistryValue(@"HKEY_CURRENT_USER\System\GameConfigStore", "GameDVR_Enabled", 0);
-                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR", "AppCaptureEnabled", 0);
-                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR", "GameDVR_Enabled", 0);
-
-                    // Optimize DWM (Desktop Window Manager) for gaming
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Dwm", "OverlayTestMode", 5);
-
-                    // Set GPU priority for games
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games", "GPU Priority", 8);
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games", "Priority", 6);
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games", "Scheduling Category", "High");
-
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            });
-        }
-
         private void OptimizeNVIDIASettings()
         {
             string nvidiaKey = @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000";
@@ -207,41 +333,6 @@ namespace PCOptimizer
             SetRegistryValue(amdKey, "KMD_FRTEnabled", 0); // Disable Frame Rate Target Control
             SetRegistryValue(amdKey, "KMD_DeLagEnabled", 1); // Enable Anti-Lag
             SetRegistryValue(amdKey, "KMD_RadeonBoostEnabled", 1); // Enable Radeon Boost
-        }
-
-        private async Task<bool> OptimizeNetworkForGaming()
-        {
-            return await Task.Run(() =>
-            {
-                try
-                {
-                    // TCP optimizations for reduced latency
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "TcpAckFrequency", 1);
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "TCPNoDelay", 1);
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "TcpDelAckTicks", 0);
-
-                    // Disable Nagle's algorithm
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "TcpNoDelay", 1);
-
-                    // Network adapter optimizations
-                    OptimizeNetworkAdapters();
-
-                    // Windows network stack optimizations
-                    ExecuteNetshCommand("int tcp set global autotuninglevel=normal");
-                    ExecuteNetshCommand("int tcp set global chimney=enabled");
-                    ExecuteNetshCommand("int tcp set global rss=enabled");
-                    ExecuteNetshCommand("int tcp set global netdma=enabled");
-
-                    // Disable bandwidth throttling
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex", 0xffffffff);
-
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            });
         }
 
         private void OptimizeNetworkAdapters()
@@ -269,45 +360,6 @@ namespace PCOptimizer
                 }
             }
             catch { }
-        }
-
-        private async Task<bool> OptimizeWindowsForGaming()
-        {
-            return await Task.Run(() =>
-            {
-                try
-                {
-                    // Enable Game Mode but disable notifications
-                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\GameBar", "AutoGameModeEnabled", 1);
-                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\GameBar", "AllowAutoGameMode", 1);
-                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\GameBar", "ShowStartupPanel", 0);
-
-                    // Disable Windows Update automatic restart
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers", 1);
-
-                    // Optimize visual effects for performance
-                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", 2);
-                    SetRegistryValue(@"HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics", "MinAnimate", "0");
-                    SetRegistryValue(@"HKEY_CURRENT_USER\Control Panel\Desktop", "MenuShowDelay", "0");
-
-                    // Disable unnecessary Windows features
-                    SetRegistryValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled", 1);
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config", "DODownloadMode", 0);
-
-                    // Optimize Windows timer resolution
-                    ExecuteBcdEditCommand("/set useplatformclock true");
-                    ExecuteBcdEditCommand("/set disabledynamictick yes");
-
-                    // Disable telemetry and diagnostics
-                    SetRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0);
-
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            });
         }
 
         private async Task<bool> OptimizeServicesForGaming()
@@ -776,55 +828,6 @@ namespace PCOptimizer
             }
         }
 
-        private async Task<bool> CreateComprehensiveBackup()
-        {
-            return await Task.Run(() =>
-            {
-                try
-                {
-                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                    string backupFile = Path.Combine(backupPath, $"gaming_optimization_backup_{timestamp}");
-
-                    // Create backup directory
-                    Directory.CreateDirectory(backupFile);
-
-                    // Export critical registry keys
-                    var criticalKeys = new[]
-                    {
-                        "HKLM\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl",
-                        "HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers",
-                        "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters",
-                        "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management",
-                        "HKCU\\SOFTWARE\\Microsoft\\GameBar",
-                        "HKCU\\Control Panel\\Mouse",
-                        "HKCU\\Control Panel\\Keyboard"
-                    };
-
-                    foreach (var key in criticalKeys)
-                    {
-                        string fileName = key.Replace("\\", "_").Replace(":", "") + ".reg";
-                        string fullPath = Path.Combine(backupFile, fileName);
-                        ExecuteScriptCommand($"reg export \"{key}\" \"{fullPath}\"");
-                    }
-
-                    // Save current service states
-                    SaveCurrentServiceStates(Path.Combine(backupFile, "services.json"));
-
-                    // Save current power scheme
-                    SaveCurrentPowerScheme(Path.Combine(backupFile, "power_scheme.txt"));
-
-                    // Create system restore point
-                    ExecutePowerShellCommand("Checkpoint-Computer -Description 'Gaming Optimization Backup' -RestorePointType 'MODIFY_SETTINGS'");
-
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            });
-        }
-
         private void SaveCurrentServiceStates(string filePath)
         {
             try
@@ -845,7 +848,7 @@ namespace PCOptimizer
                     catch { }
                 }
 
-                string json = System.Text.Json.JsonSerializer.Serialize(serviceStates, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                string json = JsonSerializer.Serialize(serviceStates, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(filePath, json);
             }
             catch { }
@@ -918,13 +921,13 @@ namespace PCOptimizer
                 try
                 {
                     string json = File.ReadAllText(servicesFilePath);
-                    var serviceStates = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+                    var serviceStates = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
 
                     foreach (var serviceState in serviceStates)
                     {
                         try
                         {
-                            var serviceData = ((System.Text.Json.JsonElement)serviceState.Value).EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString());
+                            var serviceData = ((JsonElement)serviceState.Value).EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString());
 
                             if (serviceData.TryGetValue("StartType", out string startType))
                             {

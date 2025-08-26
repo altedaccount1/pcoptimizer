@@ -1,4 +1,5 @@
-﻿using System;
+﻿// LicenseManager.cs - Fixed version with proper method naming
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -29,11 +30,11 @@ namespace PCOptimizer.Security
             httpClient.Timeout = TimeSpan.FromSeconds(15);
             httpClient.DefaultRequestHeaders.Add("User-Agent", "PCOptimizer/1.0");
 
-            hardwareFingerprint = GenerateSecureHardwareFingerprint();
+            hardwareFingerprint = GenerateHardwareFingerprint();
             LoadStoredLicense();
         }
 
-        private string GenerateSecureHardwareFingerprint()
+        private string GenerateHardwareFingerprint()
         {
             var components = new List<string>();
 
@@ -193,6 +194,19 @@ namespace PCOptimizer.Security
                     ErrorMessage = $"Validation error: {ex.Message}"
                 };
             }
+        }
+
+        // Fixed method name to match MainForm usage
+        public async Task<bool> ValidateLicenseOnline(string licenseKey)
+        {
+            var result = await ValidateLicenseAsync(licenseKey);
+            return result.IsValid;
+        }
+
+        // Added missing GetHardwareId method
+        public string GetHardwareId()
+        {
+            return hardwareFingerprint;
         }
 
         private LicenseValidationResult ValidateOffline(string licenseKey)

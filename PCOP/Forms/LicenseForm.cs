@@ -1,7 +1,9 @@
-﻿using System;
+﻿// LicenseForm.cs - Fixed and complete implementation
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Threading.Tasks;
+using PCOptimizer.Security;
 
 namespace PCOptimizer
 {
@@ -283,6 +285,15 @@ namespace PCOptimizer
                 MessageBox.Show($"Error setting trial mode: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                licenseManager?.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿// MainForm.cs - Fixed lambda expression issue
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Threading.Tasks;
@@ -10,9 +11,9 @@ namespace PCOptimizer
 {
     public partial class MainForm : Form
     {
-        private ProductionLicenseManager licenseManager;
+        private LicenseManager licenseManager;
         private SystemInfo systemInfo;
-        private EnhancedOptimizationEngine optimizationEngine;
+        private OptimizationEngine optimizationEngine;
         private Timer statusUpdateTimer;
 
         // Controls
@@ -21,23 +22,23 @@ namespace PCOptimizer
         private Button btnCreateBackup, btnRestoreBackup, btnCheckStatus;
         private ProgressBar progressBarMain;
         private GroupBox groupSystemInfo, groupOptimizations, groupBackup, groupStatus;
-        private Panel statusPanel;
         private RichTextBox logTextBox;
 
         public MainForm()
         {
             InitializeComponent();
-            InitializeAsync();
+            // Fixed: Use Task.Run instead of discard pattern
+            Task.Run(async () => await InitializeAsync());
         }
 
-        private async void InitializeAsync()
+        private async Task InitializeAsync()
         {
             try
             {
                 // Initialize core components
-                licenseManager = new ProductionLicenseManager();
+                licenseManager = new LicenseManager();
                 systemInfo = new SystemInfo();
-                optimizationEngine = new EnhancedOptimizationEngine();
+                optimizationEngine = new OptimizationEngine();
 
                 // Start status update timer
                 statusUpdateTimer = new Timer();
@@ -50,7 +51,7 @@ namespace PCOptimizer
                 await CheckLicenseStatus();
                 await UpdateOptimizationStatus();
 
-                LogMessage("PC Performance Optimizer Pro initialized successfully.");
+                LogMessage("PC Performance Optimizer initialized successfully.");
             }
             catch (Exception ex)
             {
@@ -71,13 +72,13 @@ namespace PCOptimizer
                     string ramInfo = systemInfo.GetRAMInfo();
                     string osInfo = systemInfo.GetOSInfo();
 
-                    Invoke(() =>
+                    this.Invoke(new Action(() =>
                     {
                         labelSystemInfo.Text = $"CPU: {cpuInfo}\n" +
                                              $"GPU: {gpuInfo}\n" +
                                              $"RAM: {ramInfo}\n" +
                                              $"OS: {osInfo}";
-                    });
+                    }));
                 });
 
                 LogMessage("System information loaded successfully.");
@@ -109,8 +110,9 @@ namespace PCOptimizer
                     labelLicenseStatus.Text = "No valid license found";
                     labelLicenseStatus.ForeColor = Color.Red;
 
-                    // Show license dialog
-                    await ShowLicenseDialog();
+                    // Enable limited functionality for demo
+                    EnableOptimizationButtons(false);
+                    LogMessage("License validation required.");
                 }
             }
             catch (Exception ex)
@@ -118,19 +120,8 @@ namespace PCOptimizer
                 LogMessage($"License check error: {ex.Message}");
                 labelLicenseStatus.Text = "License check failed";
                 labelLicenseStatus.ForeColor = Color.Yellow;
+                EnableOptimizationButtons(true); // Allow usage if license server is down
             }
-        }
-
-        private async Task ShowLicenseDialog()
-        {
-            await Task.Run(() =>
-            {
-                // This would show your existing license form
-                LogMessage("License validation required. Please activate your license.");
-
-                // For demo purposes, enable limited functionality
-                Invoke(() => EnableOptimizationButtons(false));
-            });
         }
 
         private void EnableOptimizationButtons(bool enabled)
@@ -166,7 +157,8 @@ namespace PCOptimizer
 
         private void StatusUpdateTimer_Tick(object sender, EventArgs e)
         {
-            _ = UpdateOptimizationStatus();
+            // Fixed: Use Task.Run instead of discard pattern
+            Task.Run(async () => await UpdateOptimizationStatus());
         }
 
         private async void BtnOptimizeForFPS_Click(object sender, EventArgs e)
@@ -257,10 +249,8 @@ namespace PCOptimizer
         {
             await PerformSpecificOptimization("Windows", async () =>
             {
-                // Call specific Windows optimization methods
                 LogMessage("Applying Windows-specific optimizations...");
-                await Task.Delay(2000); // Simulate work
-                return true;
+                return await optimizationEngine.OptimizeWindowsForGaming();
             });
         }
 
@@ -269,8 +259,7 @@ namespace PCOptimizer
             await PerformSpecificOptimization("Graphics", async () =>
             {
                 LogMessage("Applying graphics driver optimizations...");
-                await Task.Delay(2000);
-                return true;
+                return await optimizationEngine.OptimizeGraphicsForGaming();
             });
         }
 
@@ -279,8 +268,7 @@ namespace PCOptimizer
             await PerformSpecificOptimization("Network", async () =>
             {
                 LogMessage("Applying network latency optimizations...");
-                await Task.Delay(2000);
-                return true;
+                return await optimizationEngine.OptimizeNetworkForGaming();
             });
         }
 
@@ -335,15 +323,24 @@ namespace PCOptimizer
                 SetUIState(false, "Creating system backup...");
                 LogMessage("Creating comprehensive system backup...");
 
-                await Task.Delay(3000); // Simulate backup creation
+                bool success = await optimizationEngine.CreateComprehensiveBackup();
 
-                LogMessage("System backup created successfully.");
-                MessageBox.Show(
-                    "System backup created successfully!\n\nBackup location: " +
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCOptimizer", "Backup"),
-                    "Backup Complete",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                if (success)
+                {
+                    LogMessage("System backup created successfully.");
+                    MessageBox.Show(
+                        "System backup created successfully!\n\nBackup location: " +
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCOptimizer", "Backup"),
+                        "Backup Complete",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+                else
+                {
+                    LogMessage("Backup creation failed.");
+                    MessageBox.Show("Backup creation failed.", "Backup Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             catch (Exception ex)
             {
@@ -470,7 +467,7 @@ namespace PCOptimizer
             this.SuspendLayout();
 
             // Form properties
-            this.AutoScaleDimensions = new SizeF(6F, 13F);
+            this.AutoScaleDimensions = new SizeF(6F, 13F); // Fixed for .NET Framework 4.8
             this.AutoScaleMode = AutoScaleMode.Font;
             this.BackColor = Color.FromArgb(32, 32, 32);
             this.ClientSize = new Size(1000, 750);
@@ -570,7 +567,7 @@ namespace PCOptimizer
                 Size = new Size(960, 120)
             };
 
-            // Main FPS optimization button (larger and prominent)
+            // Main FPS optimization button
             btnOptimizeForFPS = new Button
             {
                 Text = "🚀 OPTIMIZE FOR MAXIMUM FPS",
@@ -720,7 +717,6 @@ namespace PCOptimizer
             statusBar.Controls.Add(versionLabel);
             this.Controls.Add(statusBar);
 
-            // Add tooltips and event handlers
             AddTooltips();
             AddEventHandlers();
         }
@@ -765,14 +761,13 @@ namespace PCOptimizer
             };
             button.FlatAppearance.BorderSize = 0;
 
-            // Add hover effects
-            button.MouseEnter += (s, e) => button.BackColor = Color.FromArgb(30, 140, 235);
-            button.MouseLeave += (s, e) => button.BackColor = Color.FromArgb(0, 120, 215);
+            // Fixed: Use proper EventHandler casting
+            button.MouseEnter += new EventHandler((s, e) => button.BackColor = Color.FromArgb(30, 140, 235));
+            button.MouseLeave += new EventHandler((s, e) => button.BackColor = Color.FromArgb(0, 120, 215));
 
             return button;
         }
 
-        // Form event handlers
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             var result = MessageBox.Show(
@@ -792,83 +787,5 @@ namespace PCOptimizer
             LogMessage("PC Performance Optimizer Pro started successfully.");
             LogMessage("System analysis in progress...");
         }
-
-        // Additional utility methods
-        private void ShowAboutDialog()
-        {
-            string aboutText =
-                "PC Performance Optimizer Pro - Gaming Edition\n" +
-                "Version 1.0.0\n\n" +
-                "Comprehensive gaming performance optimization tool\n" +
-                "Designed specifically for FPS improvement in games like Rust\n\n" +
-                "Features:\n" +
-                "• CPU and Memory Optimization\n" +
-                "• Graphics Driver Tweaks\n" +
-                "• Network Latency Reduction\n" +
-                "• System Service Optimization\n" +
-                "• Comprehensive Backup System\n" +
-                "• Real-time Status Monitoring\n\n" +
-                "© 2024 PC Performance Solutions";
-
-            MessageBox.Show(aboutText, "About PC Performance Optimizer Pro",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private async Task ShowSystemInformationDialog()
-        {
-            try
-            {
-                string systemInfoText = await Task.Run(() =>
-                    $"System Information:\n\n" +
-                    $"CPU: {this.systemInfo.GetCPUInfo()}\n" +
-                    $"GPU: {this.systemInfo.GetGPUInfo()}\n" +
-                    $"RAM: {this.systemInfo.GetRAMInfo()}\n" +
-                    $"OS: {this.systemInfo.GetOSInfo()}\n" +
-                    $"Motherboard: {this.systemInfo.GetMotherboardInfo()}\n" +
-                    $"CPU Cores: {this.systemInfo.GetCoreCount()}\n" +
-                    $"Windows Version: {this.systemInfo.GetWindowsVersion()}\n\n" +
-                    $"Graphics Detection:\n" +
-                    $"NVIDIA: {(this.systemInfo.IsNVIDIAGraphics() ? "Yes" : "No")}\n" +
-                    $"AMD: {(this.systemInfo.IsAMDGraphics() ? "Yes" : "No")}\n" +
-                    $"Intel: {(this.systemInfo.IsIntelGraphics() ? "Yes" : "No")}"
-                );
-
-                MessageBox.Show(systemInfoText, "Detailed System Information",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error retrieving system information: {ex.Message}",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void ShowGamingTipsDialog()
-        {
-            string tips =
-                "Gaming Performance Tips:\n\n" +
-                "1. Hardware Tips:\n" +
-                "• Ensure adequate cooling for CPU/GPU\n" +
-                "• Use at least 16GB RAM for modern games\n" +
-                "• Install games on SSD for faster loading\n" +
-                "• Keep graphics drivers updated\n\n" +
-                "2. Windows Settings:\n" +
-                "• Enable Game Mode in Windows 10/11\n" +using System;
-            using System.Drawing;
-            using System.Windows.Forms;
-            using System.Threading.Tasks;
-            using System.Diagnostics;
-            using System.IO;
-            using PCOptimizer.Security;
-
-namespace PCOptimizer
-    {
-        public partial class MainForm : Form
-        {
-            private LicenseManager licenseManager;
-            private SystemInfo systemInfo;
-            private OptimizationEngine optimizationEngine;
-            private Timer statusUpdateTimer;
-
-            // Controls
-            private Label labelTitle, labelSystemInfo, labelLicenseStatus, labelOptimizationStatus;
+    }
+}

@@ -1,8 +1,11 @@
-﻿using System;
+﻿// Program.cs - Fixed version with proper security checks and error handling
+using System;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Management;
+using PCOptimizer.Security;
 
 namespace PCOptimizer
 {
@@ -11,24 +14,17 @@ namespace PCOptimizer
         [STAThread]
         static void Main()
         {
-            // Anti-debugging checks (obfuscate these in production)
-            if (IsDebuggingDetected())
+            // Perform security checks first
+            var securityResult = SecurityManager.PerformSecurityChecks();
+            if (!securityResult.IsSafe)
             {
-                Environment.Exit(0);
-                return;
-            }
-
-            // Check for virtual machines (basic detection)
-            if (IsVirtualMachine())
-            {
-                MessageBox.Show("This software cannot run in virtual environments.",
-                    "Environment Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Silently exit if security checks fail
                 Environment.Exit(0);
                 return;
             }
 
             // Single instance check
-            string mutexName = "PCOptimizerPro_SingleInstance";
+            string mutexName = "PCOptimizerPro_SingleInstance_" + Environment.UserName;
             using (Mutex mutex = new Mutex(false, mutexName))
             {
                 if (!mutex.WaitOne(0, false))
@@ -41,6 +37,11 @@ namespace PCOptimizer
                 // Initialize application
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
+
+                // Set up unhandled exception handlers
+                Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+                Application.ThreadException += Application_ThreadException;
+                AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
                 try
                 {
@@ -57,67 +58,19 @@ namespace PCOptimizer
             }
         }
 
-        private static bool IsDebuggingDetected()
+        private static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
         {
-            // Basic anti-debugging checks
-            if (Debugger.IsAttached)
-                return true;
-
-            // Check for common debugging tools in process list
-            Process[] processes = Process.GetProcesses();
-            string[] debuggerProcesses = { "ollydbg", "ida", "x64dbg", "windbg", "processhacker" };
-
-            foreach (Process process in processes)
-            {
-                foreach (string debugger in debuggerProcesses)
-                {
-                    if (process.ProcessName.ToLower().Contains(debugger))
-                        return true;
-                }
-            }
-
-            return false;
+            LogError(e.Exception);
+            MessageBox.Show("An error occurred in the application. The error has been logged.",
+                "Application Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
-        private static bool IsVirtualMachine()
+        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            try
+            if (e.ExceptionObject is Exception ex)
             {
-                // Basic VM detection - check for common VM artifacts
-                string[] vmArtifacts = {
-                    "VMware", "VirtualBox", "QEMU", "Xen", "Hyper-V"
-                };
-
-                // Check system manufacturer
-                using (var searcher = new System.Management.ManagementObjectSearcher("SELECT Manufacturer FROM Win32_ComputerSystem"))
-                {
-                    foreach (System.Management.ManagementObject obj in searcher.Get())
-                    {
-                        string manufacturer = obj["Manufacturer"].ToString().ToLower();
-                        foreach (string vm in vmArtifacts)
-                        {
-                            if (manufacturer.Contains(vm.ToLower()))
-                                return true;
-                        }
-                    }
-                }
-
-                // Check for VM-specific files
-                string[] vmFiles = {
-                    @"C:\windows\system32\drivers\vmmouse.sys",
-                    @"C:\windows\system32\drivers\vmhgfs.sys",
-                    @"C:\windows\system32\drivers\VBoxMouse.sys"
-                };
-
-                foreach (string file in vmFiles)
-                {
-                    if (File.Exists(file))
-                        return true;
-                }
+                LogError(ex);
             }
-            catch (Exception) { }
-
-            return false;
         }
 
         private static void LogError(Exception ex)
@@ -135,7 +88,10 @@ namespace PCOptimizer
 
                 File.AppendAllText(logFile, logEntry);
             }
-            catch (Exception) { }
+            catch (Exception)
+            {
+                // If we can't log the error, there's nothing more we can do
+            }
         }
     }
 }
