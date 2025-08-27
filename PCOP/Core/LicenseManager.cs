@@ -1,4 +1,4 @@
-﻿// LicenseManager.cs - Clean integration with server, no test licenses
+﻿// LicenseManager.cs - Clean integration with server, no email requirements
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -28,7 +28,7 @@ namespace PCOptimizer.Security
         {
             httpClient = new HttpClient();
             httpClient.Timeout = TimeSpan.FromSeconds(15);
-            httpClient.DefaultRequestHeaders.Add("User-Agent", "PCOptimizer/1.0");
+            httpClient.DefaultRequestHeaders.Add("User-Agent", "PCOptimizer/1.2");
 
             hardwareFingerprint = GenerateHardwareFingerprint();
             LoadStoredLicense();
@@ -417,7 +417,7 @@ namespace PCOptimizer.Security
 
         private string GetProductVersion()
         {
-            return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
+            return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.2.0";
         }
 
         public void Dispose()

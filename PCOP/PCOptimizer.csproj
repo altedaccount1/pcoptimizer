@@ -94,9 +94,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Core\DiskCleanupManager.cs" />
     <Compile Include="Core\LicenseManager.cs" />
     <Compile Include="Core\OptimizationEngine.cs" />
     <Compile Include="Core\SecurityManager.cs" />
+    <Compile Include="Core\SystemHealthChecker.cs" />
     <Compile Include="Core\SystemInfo.cs" />
     <Compile Include="Forms\LicenseForm.cs">
       <SubType>Form</SubType>

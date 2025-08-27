@@ -1,11 +1,14 @@
-﻿// MainForm.cs - Enhanced version with ping testing and improved UI
+﻿// MainForm.cs - Complete version with maintenance features
 using System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using PCOptimizer.Security;
+using PCOptimizer.Cleanup;
+using PCOptimizer.Diagnostics;
 
 namespace PCOptimizer
 {
@@ -14,15 +17,18 @@ namespace PCOptimizer
         private LicenseManager licenseManager;
         private SystemInfo systemInfo;
         private OptimizationEngine optimizationEngine;
+        private DiskCleanupManager diskCleanupManager;
+        private SystemHealthChecker healthChecker;
         private Timer statusUpdateTimer;
 
-        // Controls
+        // Main Controls
         private Label labelTitle, labelSystemInfo, labelLicenseStatus, labelOptimizationStatus;
         private Label labelCurrentPing, labelPingStatus;
         private Button btnOptimizeForFPS, btnOptimizeWindows, btnOptimizeGraphics, btnOptimizeNetwork;
         private Button btnCreateBackup, btnRestoreBackup, btnCheckStatus, btnTestPing;
+        private Button btnDiskCleanup, btnHealthCheck, btnQuickClean;
         private ProgressBar progressBarMain;
-        private GroupBox groupSystemInfo, groupOptimizations, groupBackup, groupStatus, groupPing;
+        private GroupBox groupSystemInfo, groupOptimizations, groupBackup, groupStatus, groupPing, groupMaintenance;
         private RichTextBox logTextBox;
 
         public MainForm()
@@ -39,6 +45,8 @@ namespace PCOptimizer
                 licenseManager = new LicenseManager();
                 systemInfo = new SystemInfo();
                 optimizationEngine = new OptimizationEngine();
+                diskCleanupManager = new DiskCleanupManager();
+                healthChecker = new SystemHealthChecker();
 
                 // Start status update timer
                 statusUpdateTimer = new Timer();
@@ -50,7 +58,7 @@ namespace PCOptimizer
                 await LoadSystemInformation();
                 await CheckLicenseStatus();
                 await UpdateOptimizationStatus();
-                await TestCurrentPing(); // Test initial ping
+                await TestCurrentPing();
 
                 LogMessage("PC Performance Optimizer initialized successfully.");
             }
@@ -102,7 +110,6 @@ namespace PCOptimizer
                     labelLicenseStatus.Text = $"Licensed to: {license.CustomerName}\nExpires: {license.ExpirationDate:yyyy-MM-dd}";
                     labelLicenseStatus.ForeColor = Color.LimeGreen;
 
-                    // Enable all optimization features
                     EnableOptimizationButtons(true);
                     LogMessage("Valid license detected - all features enabled.");
                 }
@@ -111,7 +118,6 @@ namespace PCOptimizer
                     labelLicenseStatus.Text = "No valid license found";
                     labelLicenseStatus.ForeColor = Color.Red;
 
-                    // Enable limited functionality for demo
                     EnableOptimizationButtons(false);
                     LogMessage("License validation required.");
                 }
@@ -222,7 +228,6 @@ namespace PCOptimizer
                 SetUIState(false, "Optimizing for maximum FPS...");
                 LogMessage("Starting comprehensive FPS optimization...");
 
-                // Test ping before optimization
                 int pingBefore = await optimizationEngine.TestCurrentPing();
                 LogMessage($"Ping before optimization: {(pingBefore > 0 ? pingBefore + "ms" : "Unable to test")}");
 
@@ -230,8 +235,7 @@ namespace PCOptimizer
 
                 if (result.Success)
                 {
-                    // Test ping after optimization
-                    await Task.Delay(2000); // Wait for changes to take effect
+                    await Task.Delay(2000);
                     int pingAfter = await optimizationEngine.TestCurrentPing();
 
                     string pingImprovement = "";
@@ -252,7 +256,6 @@ namespace PCOptimizer
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
 
-                    // Offer to restart
                     var restartResult = MessageBox.Show(
                         "Would you like to restart your computer now to apply all optimizations?",
                         "Restart Required",
@@ -277,7 +280,7 @@ namespace PCOptimizer
                 }
 
                 await UpdateOptimizationStatus();
-                await TestCurrentPing(); // Update ping display
+                await TestCurrentPing();
             }
             catch (Exception ex)
             {
@@ -319,7 +322,6 @@ namespace PCOptimizer
                 LogMessage("Applying network latency optimizations...");
                 bool result = await optimizationEngine.OptimizeNetworkForGaming();
 
-                // Test ping after network optimization
                 if (result)
                 {
                     await Task.Delay(1000);
@@ -372,6 +374,216 @@ namespace PCOptimizer
             {
                 SetUIState(true, "Ready");
             }
+        }
+
+        // Maintenance feature event handlers
+        private async void BtnDiskCleanup_Click(object sender, EventArgs e)
+        {
+            var result = MessageBox.Show(
+                "This will perform a comprehensive disk cleanup including:\n\n" +
+                "• Temporary files and cache\n" +
+                "• Browser data and downloads cache\n" +
+                "• Windows update files\n" +
+                "• System logs and error reports\n" +
+                "• Game cache and shader files\n" +
+                "• Recycle bin contents\n\n" +
+                "This may take several minutes. Continue?",
+                "Deep Disk Cleanup",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    SetUIState(false, "Deep cleanup in progress...");
+                    LogMessage("Starting comprehensive disk cleanup...");
+
+                    var diskInfo = await diskCleanupManager.GetDiskSpaceInfo();
+                    LogMessage($"Free space before cleanup: {diskInfo.FreeSpaceGB} GB ({diskInfo.FreeSpacePercent:F1}%)");
+
+                    var cleanupResult = await diskCleanupManager.PerformComprehensiveCleanup();
+
+                    if (cleanupResult.Success)
+                    {
+                        var newDiskInfo = await diskCleanupManager.GetDiskSpaceInfo();
+                        LogMessage($"Free space after cleanup: {newDiskInfo.FreeSpaceGB} GB ({newDiskInfo.FreeSpacePercent:F1}%)");
+
+                        string improvementText = "";
+                        if (newDiskInfo.FreeSpaceGB > diskInfo.FreeSpaceGB)
+                        {
+                            long improvement = newDiskInfo.FreeSpaceGB - diskInfo.FreeSpaceGB;
+                            improvementText = $"\nImprovement: +{improvement} GB free space";
+                        }
+
+                        string cleanupDetails = string.Join("\n", cleanupResult.CleanupLog.Take(8));
+
+                        MessageBox.Show(
+                            $"Cleanup completed successfully!\n\n" +
+                            $"Space freed: {cleanupResult.SpaceFreedMB:N0} MB\n" +
+                            $"Current free space: {newDiskInfo.FreeSpaceGB} GB ({newDiskInfo.FreeSpacePercent:F1}%)" +
+                            improvementText + "\n\n" +
+                            $"Details:\n{cleanupDetails}",
+                            "Cleanup Complete",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+
+                        LogMessage($"Cleanup completed successfully! Freed {cleanupResult.SpaceFreedMB:N0} MB");
+                    }
+                    else
+                    {
+                        LogMessage($"Cleanup completed with issues: {cleanupResult.Message}");
+                        MessageBox.Show(
+                            $"Cleanup completed with some issues:\n\n{cleanupResult.Message}",
+                            "Cleanup Warning",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogMessage($"Cleanup failed: {ex.Message}");
+                    MessageBox.Show(
+                        $"Cleanup failed: {ex.Message}",
+                        "Cleanup Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    SetUIState(true, "Ready");
+                }
+            }
+        }
+
+        private async void BtnQuickClean_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SetUIState(false, "Quick cleanup in progress...");
+                LogMessage("Starting quick cleanup...");
+
+                long totalFreed = 0;
+                string tempPath = Path.GetTempPath();
+
+                var tempFiles = Directory.GetFiles(tempPath, "*.*", SearchOption.TopDirectoryOnly)
+                    .Where(f => DateTime.Now - File.GetLastWriteTime(f) > TimeSpan.FromHours(1));
+
+                foreach (string file in tempFiles)
+                {
+                    try
+                    {
+                        totalFreed += new FileInfo(file).Length;
+                        File.Delete(file);
+                    }
+                    catch { }
+                }
+
+                long mbFreed = totalFreed / (1024 * 1024);
+                MessageBox.Show($"Quick cleanup completed!\n\nSpace freed: {mbFreed:N0} MB",
+                    "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                LogMessage($"Quick cleanup freed {mbFreed:N0} MB");
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Quick cleanup failed: {ex.Message}");
+                MessageBox.Show($"Quick cleanup failed: {ex.Message}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                SetUIState(true, "Ready");
+            }
+        }
+
+        private async void BtnHealthCheck_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SetUIState(false, "Running comprehensive health check...");
+                LogMessage("Starting PC health analysis...");
+
+                var result = await healthChecker.PerformComprehensiveHealthCheck();
+
+                if (result.Success)
+                {
+                    ShowHealthCheckResults(result);
+                    LogMessage($"Health check completed - Overall score: {result.OverallHealthScore}/100 ({result.OverallStatus})");
+                }
+                else
+                {
+                    LogMessage($"Health check failed: {result.ErrorMessage}");
+                    MessageBox.Show(
+                        $"Health check failed: {result.ErrorMessage}",
+                        "Health Check Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Health check error: {ex.Message}");
+                MessageBox.Show(
+                    $"Health check error: {ex.Message}",
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+            finally
+            {
+                SetUIState(true, "Ready");
+            }
+        }
+
+        private void ShowHealthCheckResults(HealthCheckResult result)
+        {
+            var healthForm = new Form
+            {
+                Text = "PC Health Report",
+                Size = new Size(700, 500),
+                StartPosition = FormStartPosition.CenterParent,
+                BackColor = Color.FromArgb(32, 32, 32),
+                ForeColor = Color.White,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false
+            };
+
+            var textBox = new RichTextBox
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(45, 45, 45),
+                ForeColor = Color.White,
+                Font = new Font("Consolas", 10),
+                ReadOnly = true,
+                Padding = new Padding(10)
+            };
+
+            var healthReport = $"PC HEALTH REPORT\n" +
+                              $"================\n\n" +
+                              $"Overall Score: {result.OverallHealthScore}/100 ({result.OverallStatus})\n\n" +
+                              $"COMPONENT BREAKDOWN:\n" +
+                              $"CPU: {result.CPUHealth.HealthScore}/100 - {result.CPUHealth.Status}\n" +
+                              $"Memory: {result.MemoryHealth.HealthScore}/100 - {result.MemoryHealth.Status}\n" +
+                              $"Storage: {result.StorageHealth.HealthScore}/100 - {result.StorageHealth.Status}\n" +
+                              $"Graphics: {result.GraphicsHealth.HealthScore}/100 - {result.GraphicsHealth.Status}\n" +
+                              $"Network: {result.NetworkHealth.HealthScore}/100 - {result.NetworkHealth.Status}\n" +
+                              $"System: {result.SystemHealth.HealthScore}/100 - {result.SystemHealth.Status}\n" +
+                              $"Performance: {result.PerformanceHealth.HealthScore}/100 - {result.PerformanceHealth.Status}\n" +
+                              $"Security: {result.SecurityHealth.HealthScore}/100 - {result.SecurityHealth.Status}\n\n";
+
+            if (result.Recommendations.Any())
+            {
+                healthReport += "RECOMMENDATIONS:\n";
+                healthReport += "================\n";
+                foreach (var rec in result.Recommendations)
+                {
+                    healthReport += $"• {rec}\n";
+                }
+            }
+
+            textBox.Text = healthReport;
+            healthForm.Controls.Add(textBox);
+            healthForm.ShowDialog();
         }
 
         private async void BtnCreateBackup_Click(object sender, EventArgs e)
@@ -480,7 +692,7 @@ namespace PCOptimizer
 
         private void SetUIState(bool enabled, string statusMessage)
         {
-            // Enable/disable buttons
+            // Enable/disable main buttons
             btnOptimizeForFPS.Enabled = enabled;
             btnOptimizeWindows.Enabled = enabled;
             btnOptimizeGraphics.Enabled = enabled;
@@ -489,6 +701,11 @@ namespace PCOptimizer
             btnRestoreBackup.Enabled = enabled;
             btnCheckStatus.Enabled = enabled;
             btnTestPing.Enabled = enabled;
+
+            // Enable/disable maintenance buttons
+            if (btnDiskCleanup != null) btnDiskCleanup.Enabled = enabled;
+            if (btnQuickClean != null) btnQuickClean.Enabled = enabled;
+            if (btnHealthCheck != null) btnHealthCheck.Enabled = enabled;
 
             // Update progress bar
             if (enabled)
@@ -501,7 +718,6 @@ namespace PCOptimizer
                 progressBarMain.Style = ProgressBarStyle.Marquee;
             }
 
-            // Update status
             LogMessage(statusMessage);
         }
 
@@ -697,13 +913,39 @@ namespace PCOptimizer
 
             this.Controls.Add(groupOptimizations);
 
+            // System Maintenance & Health
+            groupMaintenance = new GroupBox
+            {
+                Text = "System Maintenance & Health",
+                ForeColor = Color.White,
+                Location = new Point(20, 400),
+                Size = new Size(480, 80)
+            };
+
+            btnDiskCleanup = CreateStyledButton("Deep Cleanup", new Point(20, 30), new Size(120, 35));
+            btnDiskCleanup.BackColor = Color.FromArgb(150, 0, 150);
+            btnDiskCleanup.Click += BtnDiskCleanup_Click;
+            groupMaintenance.Controls.Add(btnDiskCleanup);
+
+            btnQuickClean = CreateStyledButton("Quick Clean", new Point(160, 30), new Size(120, 35));
+            btnQuickClean.BackColor = Color.FromArgb(255, 140, 0);
+            btnQuickClean.Click += BtnQuickClean_Click;
+            groupMaintenance.Controls.Add(btnQuickClean);
+
+            btnHealthCheck = CreateStyledButton("Health Check", new Point(300, 30), new Size(120, 35));
+            btnHealthCheck.BackColor = Color.FromArgb(0, 150, 100);
+            btnHealthCheck.Click += BtnHealthCheck_Click;
+            groupMaintenance.Controls.Add(btnHealthCheck);
+
+            this.Controls.Add(groupMaintenance);
+
             // Backup and Restore
             groupBackup = new GroupBox
             {
                 Text = "System Backup & Restore",
                 ForeColor = Color.White,
-                Location = new Point(20, 400),
-                Size = new Size(480, 80)
+                Location = new Point(520, 400),
+                Size = new Size(460, 80)
             };
 
             btnCreateBackup = CreateStyledButton("Create Backup", new Point(20, 30));
@@ -721,14 +963,14 @@ namespace PCOptimizer
             {
                 Text = "Activity Log",
                 ForeColor = Color.White,
-                Location = new Point(520, 400),
-                Size = new Size(460, 300)
+                Location = new Point(20, 500),
+                Size = new Size(960, 200)
             };
 
             logTextBox = new RichTextBox
             {
                 Location = new Point(10, 25),
-                Size = new Size(440, 260),
+                Size = new Size(940, 160),
                 BackColor = Color.FromArgb(45, 45, 45),
                 ForeColor = Color.White,
                 Font = new Font("Consolas", 9),
@@ -742,49 +984,10 @@ namespace PCOptimizer
             progressBarMain = new ProgressBar
             {
                 Location = new Point(20, 720),
-                Size = new Size(480, 30),
+                Size = new Size(960, 30),
                 Style = ProgressBarStyle.Blocks
             };
             this.Controls.Add(progressBarMain);
-
-            // Enhanced Gaming Tips Panel
-            var tipsPanel = new Panel
-            {
-                Location = new Point(20, 500),
-                Size = new Size(480, 200),
-                BorderStyle = BorderStyle.FixedSingle,
-                BackColor = Color.FromArgb(45, 45, 45)
-            };
-
-            var tipsLabel = new Label
-            {
-                Text = "🎮 Gaming Performance & Ping Reduction Tips",
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 150, 255),
-                Location = new Point(10, 10),
-                Size = new Size(460, 20)
-            };
-            tipsPanel.Controls.Add(tipsLabel);
-
-            var tipsContent = new Label
-            {
-                Text = "• Close unnecessary programs before gaming\n" +
-                       "• Update graphics drivers regularly\n" +
-                       "• Use wired connection instead of WiFi for best ping\n" +
-                       "• Use fullscreen mode instead of windowed\n" +
-                       "• Lower in-game graphics settings if needed\n" +
-                       "• Keep Windows and games updated\n" +
-                       "• Monitor temperatures during gaming\n" +
-                       "• Use Game Mode in Windows 10/11\n" +
-                       "• Consider upgrading RAM if using <16GB\n" +
-                       "• Use faster DNS servers (1.1.1.1 or 8.8.8.8)",
-                Font = new Font("Segoe UI", 8.5f),
-                ForeColor = Color.White,
-                Location = new Point(10, 35),
-                Size = new Size(460, 155)
-            };
-            tipsPanel.Controls.Add(tipsContent);
-            this.Controls.Add(tipsPanel);
 
             // Status bar at the bottom
             var statusBar = new Panel
@@ -797,7 +1000,7 @@ namespace PCOptimizer
 
             var statusLabel = new Label
             {
-                Text = "Ready - PC Performance Optimizer Pro v1.0",
+                Text = "Ready - PC Performance Optimizer Pro v1.2",
                 Font = new Font("Segoe UI", 8),
                 ForeColor = Color.LightGray,
                 Location = new Point(10, 5),
@@ -834,6 +1037,12 @@ namespace PCOptimizer
                 "Optimize graphics drivers and GPU settings for maximum FPS");
             toolTip.SetToolTip(btnOptimizeNetwork,
                 "Reduce network latency and optimize TCP settings for online gaming");
+            toolTip.SetToolTip(btnDiskCleanup,
+                "Comprehensive disk cleanup: temp files, browser cache, Windows logs, game cache, and more");
+            toolTip.SetToolTip(btnQuickClean,
+                "Quick cleanup of temporary files and immediate cache - takes under 30 seconds");
+            toolTip.SetToolTip(btnHealthCheck,
+                "Complete PC health analysis: CPU, memory, storage, graphics, network, and system status");
             toolTip.SetToolTip(btnCreateBackup,
                 "Create a comprehensive system backup before applying optimizations");
             toolTip.SetToolTip(btnRestoreBackup,

@@ -1,4 +1,4 @@
-﻿// LicenseForm.cs - Clean integration without trial mode
+﻿// LicenseForm.cs - Clean licensing without demo/trial modes
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -28,8 +28,8 @@ namespace PCOptimizer
             this.SuspendLayout();
 
             // Form properties
-            this.Text = "License Activation - PC Performance Optimizer Pro";
-            this.Size = new Size(500, 350);
+            this.Text = "License Activation - PC Optimizer";
+            this.Size = new Size(500, 300);
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
@@ -46,7 +46,7 @@ namespace PCOptimizer
         {
             // Title
             labelTitle = new Label();
-            labelTitle.Text = "PC Performance Optimizer Pro";
+            labelTitle.Text = "PC Optimizer";
             labelTitle.Font = new Font("Segoe UI", 16, FontStyle.Bold);
             labelTitle.ForeColor = Color.FromArgb(0, 150, 255);
             labelTitle.Location = new Point(20, 20);
@@ -57,7 +57,7 @@ namespace PCOptimizer
             // License panel
             panelLicense = new Panel();
             panelLicense.Location = new Point(20, 60);
-            panelLicense.Size = new Size(440, 200);
+            panelLicense.Size = new Size(440, 160);
             panelLicense.BorderStyle = BorderStyle.FixedSingle;
             panelLicense.BackColor = Color.FromArgb(45, 45, 45);
 
@@ -86,7 +86,7 @@ namespace PCOptimizer
             labelHardwareId = new Label();
             labelHardwareId.Text = $"Hardware ID: {licenseManager.GetHardwareId()}";
             labelHardwareId.Location = new Point(20, 80);
-            labelHardwareId.Size = new Size(400, 20);
+            labelHardwareId.Size = new Size(300, 20);
             labelHardwareId.ForeColor = Color.LightGray;
             labelHardwareId.Font = new Font("Segoe UI", 8);
             panelLicense.Controls.Add(labelHardwareId);
@@ -94,8 +94,8 @@ namespace PCOptimizer
             // Copy Hardware ID button
             Button btnCopyHardwareId = new Button();
             btnCopyHardwareId.Text = "Copy";
-            btnCopyHardwareId.Location = new Point(350, 100);
-            btnCopyHardwareId.Size = new Size(70, 20);
+            btnCopyHardwareId.Location = new Point(330, 78);
+            btnCopyHardwareId.Size = new Size(90, 22);
             btnCopyHardwareId.BackColor = Color.FromArgb(80, 80, 80);
             btnCopyHardwareId.ForeColor = Color.White;
             btnCopyHardwareId.FlatStyle = FlatStyle.Flat;
@@ -110,14 +110,14 @@ namespace PCOptimizer
             // Status label
             labelStatus = new Label();
             labelStatus.Text = "Enter a valid license key to continue";
-            labelStatus.Location = new Point(20, 130);
-            labelStatus.Size = new Size(400, 40);
+            labelStatus.Location = new Point(20, 110);
+            labelStatus.Size = new Size(400, 20);
             labelStatus.ForeColor = Color.Yellow;
             panelLicense.Controls.Add(labelStatus);
 
             // Progress bar
             progressValidation = new ProgressBar();
-            progressValidation.Location = new Point(20, 170);
+            progressValidation.Location = new Point(20, 130);
             progressValidation.Size = new Size(400, 20);
             progressValidation.Style = ProgressBarStyle.Marquee;
             progressValidation.Visible = false;
@@ -128,7 +128,7 @@ namespace PCOptimizer
             // Buttons
             btnValidate = new Button();
             btnValidate.Text = "Activate License";
-            btnValidate.Location = new Point(20, 280);
+            btnValidate.Location = new Point(20, 240);
             btnValidate.Size = new Size(120, 35);
             btnValidate.BackColor = Color.FromArgb(0, 120, 215);
             btnValidate.ForeColor = Color.White;
@@ -140,7 +140,7 @@ namespace PCOptimizer
 
             btnPurchase = new Button();
             btnPurchase.Text = "Purchase License";
-            btnPurchase.Location = new Point(160, 280);
+            btnPurchase.Location = new Point(160, 240);
             btnPurchase.Size = new Size(120, 35);
             btnPurchase.BackColor = Color.FromArgb(0, 150, 0);
             btnPurchase.ForeColor = Color.White;
@@ -151,7 +151,7 @@ namespace PCOptimizer
 
             btnCancel = new Button();
             btnCancel.Text = "Cancel";
-            btnCancel.Location = new Point(300, 280);
+            btnCancel.Location = new Point(300, 240);
             btnCancel.Size = new Size(100, 35);
             btnCancel.BackColor = Color.FromArgb(100, 100, 100);
             btnCancel.ForeColor = Color.White;
@@ -159,15 +159,6 @@ namespace PCOptimizer
             btnCancel.FlatAppearance.BorderSize = 0;
             btnCancel.Click += BtnCancel_Click;
             this.Controls.Add(btnCancel);
-
-            // Additional info
-            Label labelInfo = new Label();
-            labelInfo.Text = "Need a license? Click 'Purchase License' or visit our website for support.";
-            labelInfo.Location = new Point(20, 325);
-            labelInfo.Size = new Size(400, 15);
-            labelInfo.ForeColor = Color.LightGray;
-            labelInfo.Font = new Font("Segoe UI", 8);
-            this.Controls.Add(labelInfo);
         }
 
         private void TextBoxLicenseKey_GotFocus(object sender, EventArgs e)
@@ -182,7 +173,7 @@ namespace PCOptimizer
         private void TextBoxLicenseKey_TextChanged(object sender, EventArgs e)
         {
             string key = textBoxLicenseKey.Text.Trim();
-            btnValidate.Enabled = key.Length >= 20; // Minimum length check
+            btnValidate.Enabled = key.Length >= 20 && key != "Enter license key here...";
 
             if (key.Length > 0 && key != "Enter license key here...")
             {
@@ -271,9 +262,9 @@ namespace PCOptimizer
             // Show purchase information
             MessageBox.Show(
                 "To purchase a license:\n\n" +
-                "1. Visit our website: [Your Website URL]\n" +
-                "2. Contact support: [Your Email]\n" +
-                "3. Include your Hardware ID for license generation\n\n" +
+                "1. Contact support with your Hardware ID\n" +
+                "2. Visit our website for purchase options\n" +
+                "3. Email us for custom licensing needs\n\n" +
                 $"Your Hardware ID: {licenseManager.GetHardwareId()}\n\n" +
                 "The Hardware ID has been copied to your clipboard.",
                 "Purchase License",
@@ -282,9 +273,6 @@ namespace PCOptimizer
 
             // Copy hardware ID to clipboard for easy sharing
             Clipboard.SetText(licenseManager.GetHardwareId());
-
-            // Optionally open website
-            // System.Diagnostics.Process.Start("https://yourwebsite.com/purchase");
         }
 
         private void BtnCancel_Click(object sender, EventArgs e)

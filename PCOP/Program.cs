@@ -1,10 +1,8 @@
-﻿// Program.cs - Clean licensing without trial mode
-using System;
+﻿using System;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using System.Management;
 using System.Security.Principal;
 using PCOptimizer.Security;
 
@@ -48,7 +46,7 @@ namespace PCOptimizer
 
                 try
                 {
-                    // CRITICAL: Check license before allowing app to run
+                    // Check license before allowing app to run
                     if (!CheckInitialLicense())
                     {
                         // Show license form if no valid license
@@ -64,7 +62,7 @@ namespace PCOptimizer
                         // Verify license was actually validated
                         if (!CheckInitialLicense())
                         {
-                            MessageBox.Show("License validation is required to use this software.",
+                            MessageBox.Show("A valid license is required to use this software.",
                                 "License Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             return;
                         }
@@ -132,7 +130,6 @@ namespace PCOptimizer
                 }
                 else
                 {
-                    // Running in limited mode - show warning
                     MessageBox.Show(
                         "Running in limited mode. Some optimizations may not work properly without administrator privileges.",
                         "Limited Mode",
@@ -146,7 +143,6 @@ namespace PCOptimizer
         {
             try
             {
-                // Check for valid license
                 using (var licenseManager = new LicenseManager())
                 {
                     var result = licenseManager.ValidateLicenseAsync().Result;
