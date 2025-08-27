@@ -1,6 +1,7 @@
-﻿// MainForm.cs - Complete version with maintenance features
+﻿// MainForm.cs - Modern UI with organized layout and rounded elements
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using System.Threading.Tasks;
 using System.Diagnostics;
@@ -21,15 +22,39 @@ namespace PCOptimizer
         private SystemHealthChecker healthChecker;
         private Timer statusUpdateTimer;
 
-        // Main Controls
-        private Label labelTitle, labelSystemInfo, labelLicenseStatus, labelOptimizationStatus;
-        private Label labelCurrentPing, labelPingStatus;
+        // Modern UI Controls
+        private Panel headerPanel, sidebarPanel, contentPanel, statusPanel;
+        private Label titleLabel, subtitleLabel, welcomeLabel;
+        private PictureBox logoBox;
+
+        // Sidebar Navigation
+        private Button btnDashboard, btnOptimizations, btnMaintenance, btnBackup, btnSettings;
+        private Panel activeIndicator;
+
+        // Content Panels
+        private Panel dashboardPanel, optimizationsPanel, maintenancePanel, backupPanel, settingsPanel;
+
+        // Dashboard Elements
+        private Panel systemInfoCard, pingCard, statusCard, quickActionsCard;
+        private Label labelSystemInfo, labelCurrentPing, labelPingStatus, labelOptimizationStatus;
+
+        // Optimization Elements
         private Button btnOptimizeForFPS, btnOptimizeWindows, btnOptimizeGraphics, btnOptimizeNetwork;
-        private Button btnCreateBackup, btnRestoreBackup, btnCheckStatus, btnTestPing;
+        private Button btnTestPing, btnCheckStatus;
+
+        // Maintenance Elements
         private Button btnDiskCleanup, btnHealthCheck, btnQuickClean;
-        private ProgressBar progressBarMain;
-        private GroupBox groupSystemInfo, groupOptimizations, groupBackup, groupStatus, groupPing, groupMaintenance;
+
+        // Backup Elements
+        private Button btnCreateBackup, btnRestoreBackup;
+
+        // Status Elements
+        private ProgressBar modernProgressBar;
         private RichTextBox logTextBox;
+        private Label statusLabel;
+
+        // Current active panel
+        private string currentPanel = "dashboard";
 
         public MainForm()
         {
@@ -41,26 +66,23 @@ namespace PCOptimizer
         {
             try
             {
-                // Initialize core components
                 licenseManager = new LicenseManager();
                 systemInfo = new SystemInfo();
                 optimizationEngine = new OptimizationEngine();
                 diskCleanupManager = new DiskCleanupManager();
                 healthChecker = new SystemHealthChecker();
 
-                // Start status update timer
                 statusUpdateTimer = new Timer();
-                statusUpdateTimer.Interval = 5000; // Update every 5 seconds
+                statusUpdateTimer.Interval = 5000;
                 statusUpdateTimer.Tick += StatusUpdateTimer_Tick;
                 statusUpdateTimer.Start();
 
-                // Load initial information
                 await LoadSystemInformation();
                 await CheckLicenseStatus();
                 await UpdateOptimizationStatus();
                 await TestCurrentPing();
 
-                LogMessage("PC Performance Optimizer initialized successfully.");
+                LogMessage("PC Optimizer initialized successfully.");
             }
             catch (Exception ex)
             {
@@ -70,6 +92,792 @@ namespace PCOptimizer
             }
         }
 
+        private void InitializeComponent()
+        {
+            this.SuspendLayout();
+
+            // Form properties
+            this.Size = new Size(1200, 800);
+            this.BackColor = Color.FromArgb(15, 15, 15);
+            this.ForeColor = Color.White;
+            this.FormBorderStyle = FormBorderStyle.None;
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.Text = "PC Optimizer";
+            this.Font = new Font("Segoe UI", 9F);
+
+            CreateModernUI();
+            SetupEventHandlers();
+
+            this.ResumeLayout(false);
+        }
+
+        private void CreateModernUI()
+        {
+            CreateHeader();
+            CreateSidebar();
+            CreateContentArea();
+            CreateStatusBar();
+            CreateContentPanels();
+
+            // Show dashboard by default
+            ShowPanel("dashboard");
+        }
+
+        private void CreateHeader()
+        {
+            headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 80,
+                BackColor = Color.FromArgb(20, 20, 20)
+            };
+
+            // Add subtle gradient
+            headerPanel.Paint += (s, e) =>
+            {
+                using (var brush = new LinearGradientBrush(
+                    headerPanel.ClientRectangle,
+                    Color.FromArgb(25, 25, 25),
+                    Color.FromArgb(15, 15, 15),
+                    LinearGradientMode.Vertical))
+                {
+                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+                }
+            };
+
+            // Logo placeholder (you can add an actual logo image here)
+            logoBox = new PictureBox
+            {
+                Location = new Point(20, 15),
+                Size = new Size(50, 50),
+                BackColor = Color.FromArgb(0, 120, 215),
+                SizeMode = PictureBoxSizeMode.CenterImage
+            };
+            logoBox.Paint += (s, e) =>
+            {
+                // Draw rounded logo background
+                using (var path = CreateRoundedRectanglePath(logoBox.ClientRectangle, 12))
+                using (var brush = new SolidBrush(Color.FromArgb(0, 120, 215)))
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    e.Graphics.FillPath(brush, path);
+
+                    // Draw "PC" text
+                    using (var font = new Font("Segoe UI", 14, FontStyle.Bold))
+                    using (var textBrush = new SolidBrush(Color.White))
+                    {
+                        var textSize = e.Graphics.MeasureString("PC", font);
+                        var x = (logoBox.Width - textSize.Width) / 2;
+                        var y = (logoBox.Height - textSize.Height) / 2;
+                        e.Graphics.DrawString("PC", font, textBrush, x, y);
+                    }
+                }
+            };
+            headerPanel.Controls.Add(logoBox);
+
+            titleLabel = new Label
+            {
+                Text = "PC Optimizer",
+                Location = new Point(85, 20),
+                Size = new Size(200, 30),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 18, FontStyle.Bold),
+                BackColor = Color.Transparent
+            };
+            headerPanel.Controls.Add(titleLabel);
+
+            // Window controls
+            var closeBtn = CreateWindowButton("×", new Point(headerPanel.Width - 50, 15));
+            closeBtn.Click += (s, e) => this.Close();
+            closeBtn.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            headerPanel.Controls.Add(closeBtn);
+
+            var minimizeBtn = CreateWindowButton("−", new Point(headerPanel.Width - 100, 15));
+            minimizeBtn.Click += (s, e) => this.WindowState = FormWindowState.Minimized;
+            minimizeBtn.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            headerPanel.Controls.Add(minimizeBtn);
+
+            this.Controls.Add(headerPanel);
+        }
+
+        private Button CreateWindowButton(string text, Point location)
+        {
+            var btn = new Button
+            {
+                Text = text,
+                Location = location,
+                Size = new Size(40, 30),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(50, 50, 50);
+            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(70, 70, 70);
+            return btn;
+        }
+
+        private void CreateSidebar()
+        {
+            sidebarPanel = new Panel
+            {
+                Dock = DockStyle.Left,
+                Width = 200,
+                BackColor = Color.FromArgb(25, 25, 25)
+            };
+
+            // Navigation buttons
+            var navButtons = new[]
+            {
+                ("Dashboard", "dashboard", "📊"),
+                ("Optimizations", "optimizations", "🚀"),
+                ("Maintenance", "maintenance", "🔧"),
+                ("Backup", "backup", "💾"),
+                ("Settings", "settings", "⚙️")
+            };
+
+            int y = 20;
+            foreach (var (text, id, icon) in navButtons)
+            {
+                var btn = CreateSidebarButton(text, icon, new Point(10, y), id);
+                sidebarPanel.Controls.Add(btn);
+                y += 60;
+
+                // Store reference to buttons
+                switch (id)
+                {
+                    case "dashboard": btnDashboard = btn; break;
+                    case "optimizations": btnOptimizations = btn; break;
+                    case "maintenance": btnMaintenance = btn; break;
+                    case "backup": btnBackup = btn; break;
+                    case "settings": btnSettings = btn; break;
+                }
+            }
+
+            // Active indicator
+            activeIndicator = new Panel
+            {
+                Width = 4,
+                Height = 50,
+                BackColor = Color.FromArgb(0, 120, 215),
+                Location = new Point(0, 20)
+            };
+            sidebarPanel.Controls.Add(activeIndicator);
+
+            this.Controls.Add(sidebarPanel);
+        }
+
+        private Button CreateSidebarButton(string text, string icon, Point location, string panelId)
+        {
+            var btn = new Button
+            {
+                Text = $"{icon}  {text}",
+                Location = location,
+                Size = new Size(180, 50),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = Color.FromArgb(200, 200, 200),
+                Font = new Font("Segoe UI", 11),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(15, 0, 0, 0),
+                Cursor = Cursors.Hand,
+                Tag = panelId
+            };
+
+            btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(35, 35, 35);
+
+            btn.Click += (s, e) => ShowPanel(panelId);
+
+            return btn;
+        }
+
+        private void CreateContentArea()
+        {
+            contentPanel = new Panel
+            {
+                Location = new Point(200, 80), // Start after sidebar (200px) and header (80px)
+                Size = new Size(1000, 680), // Width: 1200 - 200 = 1000, Height: 800 - 80 - 40 = 680
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                BackColor = Color.FromArgb(18, 18, 18),
+                Padding = new Padding(30, 20, 30, 20)
+            };
+            this.Controls.Add(contentPanel);
+        }
+
+        private void CreateStatusBar()
+        {
+            statusPanel = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 40,
+                BackColor = Color.FromArgb(20, 20, 20)
+            };
+
+            statusLabel = new Label
+            {
+                Text = "Ready",
+                Location = new Point(20, 12),
+                Size = new Size(200, 16),
+                ForeColor = Color.FromArgb(160, 160, 160),
+                Font = new Font("Segoe UI", 9)
+            };
+            statusPanel.Controls.Add(statusLabel);
+
+            modernProgressBar = new ProgressBar
+            {
+                Location = new Point(statusPanel.Width - 220, 10),
+                Size = new Size(180, 20),
+                Style = ProgressBarStyle.Blocks,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            statusPanel.Controls.Add(modernProgressBar);
+
+            this.Controls.Add(statusPanel);
+        }
+
+        private void CreateContentPanels()
+        {
+            // Dashboard Panel
+            dashboardPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
+            CreateDashboard();
+            contentPanel.Controls.Add(dashboardPanel);
+
+            // Optimizations Panel
+            optimizationsPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent, Visible = false };
+            CreateOptimizationsPanel();
+            contentPanel.Controls.Add(optimizationsPanel);
+
+            // Maintenance Panel
+            maintenancePanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent, Visible = false };
+            CreateMaintenancePanel();
+            contentPanel.Controls.Add(maintenancePanel);
+
+            // Backup Panel
+            backupPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent, Visible = false };
+            CreateBackupPanel();
+            contentPanel.Controls.Add(backupPanel);
+
+            // Settings Panel
+            settingsPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent, Visible = false };
+            CreateSettingsPanel();
+            contentPanel.Controls.Add(settingsPanel);
+        }
+
+        private void CreateDashboard()
+        {
+            welcomeLabel = new Label
+            {
+                Text = "Welcome to PC Optimizer",
+                Location = new Point(0, 0),
+                Size = new Size(400, 35),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 24, FontStyle.Bold),
+                BackColor = Color.Transparent
+            };
+            dashboardPanel.Controls.Add(welcomeLabel);
+
+            var subtitle = new Label
+            {
+                Text = "Optimize your PC for maximum gaming performance",
+                Location = new Point(0, 40),
+                Size = new Size(400, 25),
+                ForeColor = Color.FromArgb(160, 160, 160),
+                Font = new Font("Segoe UI", 12),
+                BackColor = Color.Transparent
+            };
+            dashboardPanel.Controls.Add(subtitle);
+
+            // Create dashboard cards
+            CreateDashboardCards();
+        }
+
+        private void CreateDashboardCards()
+        {
+            // System Info Card
+            systemInfoCard = CreateModernCard("System Information", new Point(0, 100), new Size(320, 180));
+            labelSystemInfo = new Label
+            {
+                Text = "Loading system information...",
+                Location = new Point(20, 50),
+                Size = new Size(280, 120),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10),
+                BackColor = Color.Transparent
+            };
+            systemInfoCard.Controls.Add(labelSystemInfo);
+            dashboardPanel.Controls.Add(systemInfoCard);
+
+            // Ping Status Card
+            pingCard = CreateModernCard("Network Status", new Point(340, 100), new Size(250, 180));
+            labelCurrentPing = new Label
+            {
+                Text = "Testing ping...",
+                Location = new Point(20, 50),
+                Size = new Size(210, 25),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                BackColor = Color.Transparent
+            };
+            pingCard.Controls.Add(labelCurrentPing);
+
+            labelPingStatus = new Label
+            {
+                Text = "Please wait...",
+                Location = new Point(20, 80),
+                Size = new Size(210, 25),
+                ForeColor = Color.FromArgb(255, 193, 7),
+                Font = new Font("Segoe UI", 11),
+                BackColor = Color.Transparent
+            };
+            pingCard.Controls.Add(labelPingStatus);
+
+            btnTestPing = CreateModernButton("Test Ping", new Point(20, 120), new Size(100, 35));
+            btnTestPing.Click += BtnTestPing_Click;
+            pingCard.Controls.Add(btnTestPing);
+            dashboardPanel.Controls.Add(pingCard);
+
+            // Quick Actions Card
+            quickActionsCard = CreateModernCard("Quick Actions", new Point(610, 100), new Size(250, 340));
+
+            var quickOptimizeBtn = CreateModernButton("🚀 Quick Optimize", new Point(20, 50), new Size(210, 45));
+            quickOptimizeBtn.BackColor = Color.FromArgb(0, 180, 0);
+            quickOptimizeBtn.Click += BtnOptimizeForFPS_Click;
+            quickActionsCard.Controls.Add(quickOptimizeBtn);
+
+            var quickCleanBtn = CreateModernButton("🧹 Quick Clean", new Point(20, 110), new Size(210, 45));
+            quickCleanBtn.BackColor = Color.FromArgb(255, 140, 0);
+            quickCleanBtn.Click += BtnQuickClean_Click;
+            quickActionsCard.Controls.Add(quickCleanBtn);
+
+            var healthCheckBtn = CreateModernButton("❤️ Health Check", new Point(20, 170), new Size(210, 45));
+            healthCheckBtn.BackColor = Color.FromArgb(220, 53, 69);
+            healthCheckBtn.Click += BtnHealthCheck_Click;
+            quickActionsCard.Controls.Add(healthCheckBtn);
+
+            var backupBtn = CreateModernButton("💾 Create Backup", new Point(20, 230), new Size(210, 45));
+            backupBtn.BackColor = Color.FromArgb(108, 117, 125);
+            backupBtn.Click += BtnCreateBackup_Click;
+            quickActionsCard.Controls.Add(backupBtn);
+
+            dashboardPanel.Controls.Add(quickActionsCard);
+
+            // Status Card (full width below other cards)
+            statusCard = CreateModernCard("Optimization Status", new Point(0, 300), new Size(860, 140));
+            labelOptimizationStatus = new Label
+            {
+                Text = "Checking optimization status...",
+                Location = new Point(20, 50),
+                Size = new Size(820, 80),
+                ForeColor = Color.FromArgb(255, 193, 7),
+                Font = new Font("Segoe UI", 10),
+                BackColor = Color.Transparent
+            };
+            statusCard.Controls.Add(labelOptimizationStatus);
+            dashboardPanel.Controls.Add(statusCard);
+        }
+
+        private void CreateOptimizationsPanel()
+        {
+            var title = new Label
+            {
+                Text = "Performance Optimizations",
+                Location = new Point(0, 0),
+                Size = new Size(400, 35),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                BackColor = Color.Transparent
+            };
+            optimizationsPanel.Controls.Add(title);
+
+            // Main FPS Optimization
+            var mainOptCard = CreateModernCard("Ultimate FPS Optimization", new Point(0, 60), new Size(860, 120));
+            var mainOptDesc = new Label
+            {
+                Text = "Apply comprehensive optimizations for maximum FPS and lowest ping. Includes CPU, Memory, Graphics, Network, and Windows tweaks.",
+                Location = new Point(20, 50),
+                Size = new Size(600, 40),
+                ForeColor = Color.FromArgb(200, 200, 200),
+                Font = new Font("Segoe UI", 11),
+                BackColor = Color.Transparent
+            };
+            mainOptCard.Controls.Add(mainOptDesc);
+
+            btnOptimizeForFPS = CreateModernButton("🚀 OPTIMIZE FOR MAXIMUM FPS", new Point(650, 35), new Size(180, 50));
+            btnOptimizeForFPS.BackColor = Color.FromArgb(0, 180, 0);
+            btnOptimizeForFPS.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            btnOptimizeForFPS.Click += BtnOptimizeForFPS_Click;
+            mainOptCard.Controls.Add(btnOptimizeForFPS);
+            optimizationsPanel.Controls.Add(mainOptCard);
+
+            // Individual Optimizations
+            var individualCard = CreateModernCard("Individual Optimizations", new Point(0, 200), new Size(860, 160));
+
+            btnOptimizeWindows = CreateModernButton("Windows\nOptimization", new Point(30, 50), new Size(140, 70));
+            btnOptimizeWindows.Click += BtnOptimizeWindows_Click;
+            individualCard.Controls.Add(btnOptimizeWindows);
+
+            btnOptimizeGraphics = CreateModernButton("Graphics\nOptimization", new Point(200, 50), new Size(140, 70));
+            btnOptimizeGraphics.Click += BtnOptimizeGraphics_Click;
+            individualCard.Controls.Add(btnOptimizeGraphics);
+
+            btnOptimizeNetwork = CreateModernButton("Network\nOptimization", new Point(370, 50), new Size(140, 70));
+            btnOptimizeNetwork.Click += BtnOptimizeNetwork_Click;
+            individualCard.Controls.Add(btnOptimizeNetwork);
+
+            btnCheckStatus = CreateModernButton("Check Status", new Point(540, 50), new Size(140, 70));
+            btnCheckStatus.BackColor = Color.FromArgb(108, 117, 125);
+            btnCheckStatus.Click += BtnCheckStatus_Click;
+            individualCard.Controls.Add(btnCheckStatus);
+
+            optimizationsPanel.Controls.Add(individualCard);
+
+            // Activity Log
+            var logCard = CreateModernCard("Activity Log", new Point(0, 380), new Size(860, 200));
+            logTextBox = new RichTextBox
+            {
+                Location = new Point(20, 50),
+                Size = new Size(820, 130),
+                BackColor = Color.FromArgb(30, 30, 30),
+                ForeColor = Color.White,
+                Font = new Font("Consolas", 9),
+                ReadOnly = true,
+                BorderStyle = BorderStyle.None
+            };
+            logCard.Controls.Add(logTextBox);
+            optimizationsPanel.Controls.Add(logCard);
+        }
+
+        private void CreateMaintenancePanel()
+        {
+            var title = new Label
+            {
+                Text = "System Maintenance",
+                Location = new Point(0, 0),
+                Size = new Size(400, 35),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                BackColor = Color.Transparent
+            };
+            maintenancePanel.Controls.Add(title);
+
+            // Cleanup Section
+            var cleanupCard = CreateModernCard("Disk Cleanup", new Point(0, 60), new Size(420, 250));
+
+            var cleanupDesc = new Label
+            {
+                Text = "Free up disk space by removing temporary files, cache, and unnecessary data.",
+                Location = new Point(20, 50),
+                Size = new Size(380, 40),
+                ForeColor = Color.FromArgb(200, 200, 200),
+                Font = new Font("Segoe UI", 11),
+                BackColor = Color.Transparent
+            };
+            cleanupCard.Controls.Add(cleanupDesc);
+
+            btnDiskCleanup = CreateModernButton("🧹 Deep Cleanup", new Point(20, 110), new Size(170, 50));
+            btnDiskCleanup.BackColor = Color.FromArgb(150, 0, 150);
+            btnDiskCleanup.Click += BtnDiskCleanup_Click;
+            cleanupCard.Controls.Add(btnDiskCleanup);
+
+            btnQuickClean = CreateModernButton("⚡ Quick Clean", new Point(210, 110), new Size(170, 50));
+            btnQuickClean.BackColor = Color.FromArgb(255, 140, 0);
+            btnQuickClean.Click += BtnQuickClean_Click;
+            cleanupCard.Controls.Add(btnQuickClean);
+
+            maintenancePanel.Controls.Add(cleanupCard);
+
+            // Health Check Section
+            var healthCard = CreateModernCard("System Health", new Point(440, 60), new Size(420, 250));
+
+            var healthDesc = new Label
+            {
+                Text = "Analyze your system's health including CPU, memory, storage, and network status.",
+                Location = new Point(20, 50),
+                Size = new Size(380, 40),
+                ForeColor = Color.FromArgb(200, 200, 200),
+                Font = new Font("Segoe UI", 11),
+                BackColor = Color.Transparent
+            };
+            healthCard.Controls.Add(healthDesc);
+
+            btnHealthCheck = CreateModernButton("❤️ Full Health Check", new Point(20, 110), new Size(170, 50));
+            btnHealthCheck.BackColor = Color.FromArgb(220, 53, 69);
+            btnHealthCheck.Click += BtnHealthCheck_Click;
+            healthCard.Controls.Add(btnHealthCheck);
+
+            maintenancePanel.Controls.Add(healthCard);
+        }
+
+        private void CreateBackupPanel()
+        {
+            var title = new Label
+            {
+                Text = "System Backup & Restore",
+                Location = new Point(0, 0),
+                Size = new Size(400, 35),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                BackColor = Color.Transparent
+            };
+            backupPanel.Controls.Add(title);
+
+            var backupCard = CreateModernCard("Backup Management", new Point(0, 60), new Size(860, 200));
+
+            var backupDesc = new Label
+            {
+                Text = "Create system backups before applying optimizations and restore if needed.",
+                Location = new Point(20, 50),
+                Size = new Size(600, 30),
+                ForeColor = Color.FromArgb(200, 200, 200),
+                Font = new Font("Segoe UI", 12),
+                BackColor = Color.Transparent
+            };
+            backupCard.Controls.Add(backupDesc);
+
+            btnCreateBackup = CreateModernButton("💾 Create Backup", new Point(50, 100), new Size(200, 60));
+            btnCreateBackup.BackColor = Color.FromArgb(40, 167, 69);
+            btnCreateBackup.Click += BtnCreateBackup_Click;
+            backupCard.Controls.Add(btnCreateBackup);
+
+            btnRestoreBackup = CreateModernButton("🔄 Restore Backup", new Point(300, 100), new Size(200, 60));
+            btnRestoreBackup.BackColor = Color.FromArgb(255, 193, 7);
+            btnRestoreBackup.ForeColor = Color.Black;
+            btnRestoreBackup.Click += BtnRestoreBackup_Click;
+            backupCard.Controls.Add(btnRestoreBackup);
+
+            backupPanel.Controls.Add(backupCard);
+        }
+
+        private void CreateSettingsPanel()
+        {
+            var title = new Label
+            {
+                Text = "Settings",
+                Location = new Point(0, 0),
+                Size = new Size(400, 35),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                BackColor = Color.Transparent
+            };
+            settingsPanel.Controls.Add(title);
+
+            var settingsCard = CreateModernCard("Application Settings", new Point(0, 60), new Size(860, 300));
+
+            var aboutLabel = new Label
+            {
+                Text = "PC Optimizer v1.2\nGaming Performance Suite\n\nOptimize your PC for maximum gaming performance with advanced FPS and ping optimizations.",
+                Location = new Point(20, 50),
+                Size = new Size(400, 100),
+                ForeColor = Color.FromArgb(200, 200, 200),
+                Font = new Font("Segoe UI", 11),
+                BackColor = Color.Transparent
+            };
+            settingsCard.Controls.Add(aboutLabel);
+
+            settingsPanel.Controls.Add(settingsCard);
+        }
+
+        private Panel CreateModernCard(string title, Point location, Size size)
+        {
+            var card = new Panel
+            {
+                Location = location,
+                Size = size,
+                BackColor = Color.FromArgb(28, 28, 28)
+            };
+
+            // Add rounded corners and shadow effect
+            card.Paint += (s, e) =>
+            {
+                var rect = card.ClientRectangle;
+                using (var path = CreateRoundedRectanglePath(rect, 12))
+                using (var brush = new SolidBrush(Color.FromArgb(28, 28, 28)))
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    e.Graphics.FillPath(brush, path);
+
+                    // Add subtle border
+                    using (var pen = new Pen(Color.FromArgb(45, 45, 45), 1))
+                    {
+                        e.Graphics.DrawPath(pen, path);
+                    }
+                }
+            };
+
+            var titleLabel = new Label
+            {
+                Text = title,
+                Location = new Point(20, 15),
+                Size = new Size(size.Width - 40, 25),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                BackColor = Color.Transparent
+            };
+            card.Controls.Add(titleLabel);
+
+            return card;
+        }
+
+        private Button CreateModernButton(string text, Point location, Size size)
+        {
+            var btn = new Button
+            {
+                Text = text,
+                Location = location,
+                Size = size,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(0, 120, 215),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+
+            btn.FlatAppearance.BorderSize = 0;
+            btn.Paint += (s, e) =>
+            {
+                var rect = btn.ClientRectangle;
+                using (var path = CreateRoundedRectanglePath(rect, 8))
+                using (var brush = new SolidBrush(btn.BackColor))
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    e.Graphics.FillPath(brush, path);
+
+                    // Draw text
+                    using (var textBrush = new SolidBrush(btn.ForeColor))
+                    {
+                        var textSize = e.Graphics.MeasureString(btn.Text, btn.Font);
+                        var x = (btn.Width - textSize.Width) / 2;
+                        var y = (btn.Height - textSize.Height) / 2;
+                        e.Graphics.DrawString(btn.Text, btn.Font, textBrush, x, y);
+                    }
+                }
+            };
+
+            btn.MouseEnter += (s, e) =>
+            {
+                var originalColor = btn.BackColor;
+                btn.BackColor = Color.FromArgb(
+                    Math.Min(255, originalColor.R + 30),
+                    Math.Min(255, originalColor.G + 30),
+                    Math.Min(255, originalColor.B + 30));
+                btn.Invalidate();
+            };
+
+            btn.MouseLeave += (s, e) =>
+            {
+                btn.BackColor = Color.FromArgb(0, 120, 215); // Reset to default if needed
+                btn.Invalidate();
+            };
+
+            return btn;
+        }
+
+        private GraphicsPath CreateRoundedRectanglePath(Rectangle rect, int cornerRadius)
+        {
+            var path = new GraphicsPath();
+            int diameter = cornerRadius * 2;
+
+            path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
+            path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
+            path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
+            path.CloseFigure();
+
+            return path;
+        }
+
+        private void ShowPanel(string panelName)
+        {
+            // Hide all panels
+            dashboardPanel.Visible = false;
+            optimizationsPanel.Visible = false;
+            maintenancePanel.Visible = false;
+            backupPanel.Visible = false;
+            settingsPanel.Visible = false;
+
+            // Reset all button colors
+            ResetSidebarButtons();
+
+            // Show selected panel and update active indicator
+            switch (panelName)
+            {
+                case "dashboard":
+                    dashboardPanel.Visible = true;
+                    btnDashboard.ForeColor = Color.White;
+                    btnDashboard.BackColor = Color.FromArgb(45, 45, 45);
+                    activeIndicator.Location = new Point(0, 20);
+                    break;
+                case "optimizations":
+                    optimizationsPanel.Visible = true;
+                    btnOptimizations.ForeColor = Color.White;
+                    btnOptimizations.BackColor = Color.FromArgb(45, 45, 45);
+                    activeIndicator.Location = new Point(0, 80);
+                    break;
+                case "maintenance":
+                    maintenancePanel.Visible = true;
+                    btnMaintenance.ForeColor = Color.White;
+                    btnMaintenance.BackColor = Color.FromArgb(45, 45, 45);
+                    activeIndicator.Location = new Point(0, 140);
+                    break;
+                case "backup":
+                    backupPanel.Visible = true;
+                    btnBackup.ForeColor = Color.White;
+                    btnBackup.BackColor = Color.FromArgb(45, 45, 45);
+                    activeIndicator.Location = new Point(0, 200);
+                    break;
+                case "settings":
+                    settingsPanel.Visible = true;
+                    btnSettings.ForeColor = Color.White;
+                    btnSettings.BackColor = Color.FromArgb(45, 45, 45);
+                    activeIndicator.Location = new Point(0, 260);
+                    break;
+            }
+
+            currentPanel = panelName;
+        }
+
+        private void ResetSidebarButtons()
+        {
+            var buttons = new[] { btnDashboard, btnOptimizations, btnMaintenance, btnBackup, btnSettings };
+            foreach (var btn in buttons)
+            {
+                if (btn != null)
+                {
+                    btn.ForeColor = Color.FromArgb(200, 200, 200);
+                    btn.BackColor = Color.Transparent;
+                }
+            }
+        }
+
+        private void SetupEventHandlers()
+        {
+            this.Load += MainForm_Load;
+            this.FormClosing += MainForm_FormClosing;
+
+            // Make form draggable
+            headerPanel.MouseDown += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    ReleaseCapture();
+                    SendMessage(this.Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+                }
+            };
+        }
+
+        // Windows API for dragging
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        public static extern bool ReleaseCapture();
+
+        public const int WM_NCLBUTTONDOWN = 0xA1;
+        public const int HT_CAPTION = 0x2;
+
+        // Event handlers and methods from original implementation
         private async Task LoadSystemInformation()
         {
             try
@@ -107,36 +915,28 @@ namespace PCOptimizer
                 if (licenseResult.IsValid)
                 {
                     var license = licenseResult.LicenseInfo;
-                    labelLicenseStatus.Text = $"Licensed to: {license.CustomerName}\nExpires: {license.ExpirationDate:yyyy-MM-dd}";
-                    labelLicenseStatus.ForeColor = Color.LimeGreen;
-
+                    LogMessage($"Valid license detected for {license.CustomerName}");
                     EnableOptimizationButtons(true);
-                    LogMessage("Valid license detected - all features enabled.");
                 }
                 else
                 {
-                    labelLicenseStatus.Text = "No valid license found";
-                    labelLicenseStatus.ForeColor = Color.Red;
-
-                    EnableOptimizationButtons(false);
                     LogMessage("License validation required.");
+                    EnableOptimizationButtons(false);
                 }
             }
             catch (Exception ex)
             {
                 LogMessage($"License check error: {ex.Message}");
-                labelLicenseStatus.Text = "License check failed";
-                labelLicenseStatus.ForeColor = Color.Yellow;
                 EnableOptimizationButtons(true); // Allow usage if license server is down
             }
         }
 
         private void EnableOptimizationButtons(bool enabled)
         {
-            btnOptimizeForFPS.Enabled = enabled;
-            btnOptimizeWindows.Enabled = enabled;
-            btnOptimizeGraphics.Enabled = enabled;
-            btnOptimizeNetwork.Enabled = enabled;
+            if (btnOptimizeForFPS != null) btnOptimizeForFPS.Enabled = enabled;
+            if (btnOptimizeWindows != null) btnOptimizeWindows.Enabled = enabled;
+            if (btnOptimizeGraphics != null) btnOptimizeGraphics.Enabled = enabled;
+            if (btnOptimizeNetwork != null) btnOptimizeNetwork.Enabled = enabled;
         }
 
         private async Task UpdateOptimizationStatus()
@@ -145,16 +945,17 @@ namespace PCOptimizer
             {
                 var status = await Task.Run(() => optimizationEngine.GetOptimizationStatus());
 
-                string statusText = $"Overall Optimized: {(status.OverallOptimized ? "✓" : "✗")}\n" +
-                                   $"CPU: {(status.CPUOptimized ? "✓" : "✗")} | " +
-                                   $"Memory: {(status.MemoryOptimized ? "✓" : "✗")} | " +
-                                   $"Graphics: {(status.GraphicsOptimized ? "✓" : "✗")}\n" +
-                                   $"Network: {(status.NetworkOptimized ? "✓" : "✗")} | " +
-                                   $"Services: {(status.ServicesOptimized ? "✓" : "✗")} | " +
-                                   $"Power: {(status.PowerOptimized ? "✓" : "✗")}";
+                string statusText = $"Overall Optimized: {(status.OverallOptimized ? "✅" : "❌")}\n" +
+                                   $"CPU: {(status.CPUOptimized ? "✅" : "❌")} | " +
+                                   $"Memory: {(status.MemoryOptimized ? "✅" : "❌")} | " +
+                                   $"Graphics: {(status.GraphicsOptimized ? "✅" : "❌")}\n" +
+                                   $"Network: {(status.NetworkOptimized ? "✅" : "❌")} | " +
+                                   $"Services: {(status.ServicesOptimized ? "✅" : "❌")} | " +
+                                   $"Power: {(status.PowerOptimized ? "✅" : "❌")}";
 
                 labelOptimizationStatus.Text = statusText;
-                labelOptimizationStatus.ForeColor = status.OverallOptimized ? Color.LimeGreen : Color.Yellow;
+                labelOptimizationStatus.ForeColor = status.OverallOptimized ?
+                    Color.FromArgb(40, 167, 69) : Color.FromArgb(255, 193, 7);
             }
             catch (Exception ex)
             {
@@ -167,29 +968,48 @@ namespace PCOptimizer
             try
             {
                 labelPingStatus.Text = "Testing ping...";
-                labelPingStatus.ForeColor = Color.Yellow;
+                labelPingStatus.ForeColor = Color.FromArgb(255, 193, 7);
 
                 int ping = await optimizationEngine.TestCurrentPing();
 
                 if (ping > 0)
                 {
-                    labelCurrentPing.Text = $"Current Ping: {ping}ms";
-                    labelPingStatus.Text = ping < 50 ? "Excellent" : ping < 100 ? "Good" : ping < 150 ? "Fair" : "Poor";
-                    labelPingStatus.ForeColor = ping < 50 ? Color.LimeGreen : ping < 100 ? Color.Green : ping < 150 ? Color.Orange : Color.Red;
+                    labelCurrentPing.Text = $"Ping: {ping}ms";
+
+                    if (ping < 30)
+                    {
+                        labelPingStatus.Text = "🟢 Excellent";
+                        labelPingStatus.ForeColor = Color.FromArgb(40, 167, 69);
+                    }
+                    else if (ping < 60)
+                    {
+                        labelPingStatus.Text = "🟡 Good";
+                        labelPingStatus.ForeColor = Color.FromArgb(255, 193, 7);
+                    }
+                    else if (ping < 100)
+                    {
+                        labelPingStatus.Text = "🟠 Fair";
+                        labelPingStatus.ForeColor = Color.FromArgb(255, 140, 0);
+                    }
+                    else
+                    {
+                        labelPingStatus.Text = "🔴 Poor";
+                        labelPingStatus.ForeColor = Color.FromArgb(220, 53, 69);
+                    }
                 }
                 else
                 {
                     labelCurrentPing.Text = "Ping test failed";
-                    labelPingStatus.Text = "Unable to test";
-                    labelPingStatus.ForeColor = Color.Red;
+                    labelPingStatus.Text = "❌ Unable to test";
+                    labelPingStatus.ForeColor = Color.FromArgb(220, 53, 69);
                 }
             }
             catch (Exception ex)
             {
                 LogMessage($"Ping test error: {ex.Message}");
                 labelCurrentPing.Text = "Ping test error";
-                labelPingStatus.Text = "Test failed";
-                labelPingStatus.ForeColor = Color.Red;
+                labelPingStatus.Text = "❌ Test failed";
+                labelPingStatus.ForeColor = Color.FromArgb(220, 53, 69);
             }
         }
 
@@ -198,6 +1018,53 @@ namespace PCOptimizer
             Task.Run(async () => await UpdateOptimizationStatus());
         }
 
+        private void SetUIState(bool enabled, string statusMessage)
+        {
+            // Update status
+            statusLabel.Text = statusMessage;
+
+            // Update progress bar
+            if (enabled)
+            {
+                modernProgressBar.Style = ProgressBarStyle.Blocks;
+                modernProgressBar.Value = 0;
+            }
+            else
+            {
+                modernProgressBar.Style = ProgressBarStyle.Marquee;
+            }
+
+            // Enable/disable main buttons
+            if (btnOptimizeForFPS != null) btnOptimizeForFPS.Enabled = enabled;
+            if (btnOptimizeWindows != null) btnOptimizeWindows.Enabled = enabled;
+            if (btnOptimizeGraphics != null) btnOptimizeGraphics.Enabled = enabled;
+            if (btnOptimizeNetwork != null) btnOptimizeNetwork.Enabled = enabled;
+            if (btnCreateBackup != null) btnCreateBackup.Enabled = enabled;
+            if (btnRestoreBackup != null) btnRestoreBackup.Enabled = enabled;
+            if (btnCheckStatus != null) btnCheckStatus.Enabled = enabled;
+            if (btnTestPing != null) btnTestPing.Enabled = enabled;
+            if (btnDiskCleanup != null) btnDiskCleanup.Enabled = enabled;
+            if (btnQuickClean != null) btnQuickClean.Enabled = enabled;
+            if (btnHealthCheck != null) btnHealthCheck.Enabled = enabled;
+        }
+
+        private void LogMessage(string message)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action<string>(LogMessage), message);
+                return;
+            }
+
+            if (logTextBox != null)
+            {
+                string timestamp = DateTime.Now.ToString("HH:mm:ss");
+                logTextBox.AppendText($"[{timestamp}] {message}\n");
+                logTextBox.ScrollToCaret();
+            }
+        }
+
+        // Event handlers for buttons
         private async void BtnOptimizeForFPS_Click(object sender, EventArgs e)
         {
             var result = MessageBox.Show(
@@ -376,7 +1243,6 @@ namespace PCOptimizer
             }
         }
 
-        // Maintenance feature event handlers
         private async void BtnDiskCleanup_Click(object sender, EventArgs e)
         {
             var result = MessageBox.Show(
@@ -690,400 +1556,16 @@ namespace PCOptimizer
             SetUIState(true, "Ready");
         }
 
-        private void SetUIState(bool enabled, string statusMessage)
+        private void MainForm_Load(object sender, EventArgs e)
         {
-            // Enable/disable main buttons
-            btnOptimizeForFPS.Enabled = enabled;
-            btnOptimizeWindows.Enabled = enabled;
-            btnOptimizeGraphics.Enabled = enabled;
-            btnOptimizeNetwork.Enabled = enabled;
-            btnCreateBackup.Enabled = enabled;
-            btnRestoreBackup.Enabled = enabled;
-            btnCheckStatus.Enabled = enabled;
-            btnTestPing.Enabled = enabled;
-
-            // Enable/disable maintenance buttons
-            if (btnDiskCleanup != null) btnDiskCleanup.Enabled = enabled;
-            if (btnQuickClean != null) btnQuickClean.Enabled = enabled;
-            if (btnHealthCheck != null) btnHealthCheck.Enabled = enabled;
-
-            // Update progress bar
-            if (enabled)
-            {
-                progressBarMain.Style = ProgressBarStyle.Blocks;
-                progressBarMain.Value = 0;
-            }
-            else
-            {
-                progressBarMain.Style = ProgressBarStyle.Marquee;
-            }
-
-            LogMessage(statusMessage);
-        }
-
-        private void LogMessage(string message)
-        {
-            if (InvokeRequired)
-            {
-                Invoke(new Action<string>(LogMessage), message);
-                return;
-            }
-
-            string timestamp = DateTime.Now.ToString("HH:mm:ss");
-            logTextBox.AppendText($"[{timestamp}] {message}\n");
-            logTextBox.ScrollToCaret();
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                statusUpdateTimer?.Stop();
-                statusUpdateTimer?.Dispose();
-                licenseManager?.Dispose();
-            }
-            base.Dispose(disposing);
-        }
-
-        private void InitializeComponent()
-        {
-            this.SuspendLayout();
-
-            // Form properties
-            this.AutoScaleDimensions = new SizeF(6F, 13F);
-            this.AutoScaleMode = AutoScaleMode.Font;
-            this.BackColor = Color.FromArgb(32, 32, 32);
-            this.ClientSize = new Size(1000, 800);
-            this.ForeColor = Color.White;
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
-            this.Name = "MainForm";
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.Text = "PC Performance Optimizer Pro - Gaming Edition";
-
-            CreateControls();
-
-            this.ResumeLayout(false);
-        }
-
-        private void CreateControls()
-        {
-            // Title
-            labelTitle = new Label
-            {
-                Text = "PC Performance Optimizer Pro - Gaming Edition",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 150, 255),
-                Location = new Point(20, 20),
-                Size = new Size(600, 30),
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-            this.Controls.Add(labelTitle);
-
-            // License Status
-            var groupLicense = new GroupBox
-            {
-                Text = "License Status",
-                ForeColor = Color.White,
-                Location = new Point(650, 20),
-                Size = new Size(330, 80)
-            };
-
-            labelLicenseStatus = new Label
-            {
-                Text = "Checking license...",
-                Location = new Point(10, 25),
-                Size = new Size(310, 40),
-                ForeColor = Color.Yellow
-            };
-            groupLicense.Controls.Add(labelLicenseStatus);
-            this.Controls.Add(groupLicense);
-
-            // System Information
-            groupSystemInfo = new GroupBox
-            {
-                Text = "System Information",
-                ForeColor = Color.White,
-                Location = new Point(20, 120),
-                Size = new Size(480, 120)
-            };
-
-            labelSystemInfo = new Label
-            {
-                Text = "Loading system information...",
-                Location = new Point(10, 25),
-                Size = new Size(460, 80),
-                ForeColor = Color.White
-            };
-            groupSystemInfo.Controls.Add(labelSystemInfo);
-            this.Controls.Add(groupSystemInfo);
-
-            // Ping Status Group
-            groupPing = new GroupBox
-            {
-                Text = "Network Ping Status",
-                ForeColor = Color.White,
-                Location = new Point(520, 120),
-                Size = new Size(230, 120)
-            };
-
-            labelCurrentPing = new Label
-            {
-                Text = "Testing ping...",
-                Location = new Point(10, 25),
-                Size = new Size(210, 20),
-                ForeColor = Color.White
-            };
-            groupPing.Controls.Add(labelCurrentPing);
-
-            labelPingStatus = new Label
-            {
-                Text = "Please wait...",
-                Location = new Point(10, 50),
-                Size = new Size(210, 20),
-                ForeColor = Color.Yellow,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold)
-            };
-            groupPing.Controls.Add(labelPingStatus);
-
-            btnTestPing = CreateStyledButton("Test Ping", new Point(10, 80), new Size(100, 25));
-            btnTestPing.Click += BtnTestPing_Click;
-            groupPing.Controls.Add(btnTestPing);
-            this.Controls.Add(groupPing);
-
-            // Optimization Status
-            groupStatus = new GroupBox
-            {
-                Text = "Optimization Status",
-                ForeColor = Color.White,
-                Location = new Point(770, 120),
-                Size = new Size(210, 120)
-            };
-
-            labelOptimizationStatus = new Label
-            {
-                Text = "Checking optimization status...",
-                Location = new Point(10, 25),
-                Size = new Size(190, 60),
-                ForeColor = Color.Yellow
-            };
-            groupStatus.Controls.Add(labelOptimizationStatus);
-
-            btnCheckStatus = CreateStyledButton("Refresh Status", new Point(10, 85), new Size(120, 25));
-            btnCheckStatus.Click += BtnCheckStatus_Click;
-            groupStatus.Controls.Add(btnCheckStatus);
-            this.Controls.Add(groupStatus);
-
-            // Main Optimizations
-            groupOptimizations = new GroupBox
-            {
-                Text = "FPS & Ping Optimizations",
-                ForeColor = Color.White,
-                Location = new Point(20, 260),
-                Size = new Size(960, 120)
-            };
-
-            // Main FPS optimization button
-            btnOptimizeForFPS = new Button
-            {
-                Text = "🚀 OPTIMIZE FOR MAXIMUM FPS & LOW PING",
-                Location = new Point(20, 30),
-                Size = new Size(350, 50),
-                BackColor = Color.FromArgb(0, 180, 0),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 11, FontStyle.Bold)
-            };
-            btnOptimizeForFPS.FlatAppearance.BorderSize = 0;
-            btnOptimizeForFPS.Click += BtnOptimizeForFPS_Click;
-            groupOptimizations.Controls.Add(btnOptimizeForFPS);
-
-            // Individual optimization buttons
-            btnOptimizeWindows = CreateStyledButton("Optimize Windows", new Point(400, 30));
-            btnOptimizeWindows.Click += BtnOptimizeWindows_Click;
-            groupOptimizations.Controls.Add(btnOptimizeWindows);
-
-            btnOptimizeGraphics = CreateStyledButton("Optimize Graphics", new Point(580, 30));
-            btnOptimizeGraphics.Click += BtnOptimizeGraphics_Click;
-            groupOptimizations.Controls.Add(btnOptimizeGraphics);
-
-            btnOptimizeNetwork = CreateStyledButton("Optimize Network", new Point(760, 30));
-            btnOptimizeNetwork.Click += BtnOptimizeNetwork_Click;
-            groupOptimizations.Controls.Add(btnOptimizeNetwork);
-
-            this.Controls.Add(groupOptimizations);
-
-            // System Maintenance & Health
-            groupMaintenance = new GroupBox
-            {
-                Text = "System Maintenance & Health",
-                ForeColor = Color.White,
-                Location = new Point(20, 400),
-                Size = new Size(480, 80)
-            };
-
-            btnDiskCleanup = CreateStyledButton("Deep Cleanup", new Point(20, 30), new Size(120, 35));
-            btnDiskCleanup.BackColor = Color.FromArgb(150, 0, 150);
-            btnDiskCleanup.Click += BtnDiskCleanup_Click;
-            groupMaintenance.Controls.Add(btnDiskCleanup);
-
-            btnQuickClean = CreateStyledButton("Quick Clean", new Point(160, 30), new Size(120, 35));
-            btnQuickClean.BackColor = Color.FromArgb(255, 140, 0);
-            btnQuickClean.Click += BtnQuickClean_Click;
-            groupMaintenance.Controls.Add(btnQuickClean);
-
-            btnHealthCheck = CreateStyledButton("Health Check", new Point(300, 30), new Size(120, 35));
-            btnHealthCheck.BackColor = Color.FromArgb(0, 150, 100);
-            btnHealthCheck.Click += BtnHealthCheck_Click;
-            groupMaintenance.Controls.Add(btnHealthCheck);
-
-            this.Controls.Add(groupMaintenance);
-
-            // Backup and Restore
-            groupBackup = new GroupBox
-            {
-                Text = "System Backup & Restore",
-                ForeColor = Color.White,
-                Location = new Point(520, 400),
-                Size = new Size(460, 80)
-            };
-
-            btnCreateBackup = CreateStyledButton("Create Backup", new Point(20, 30));
-            btnCreateBackup.Click += BtnCreateBackup_Click;
-            groupBackup.Controls.Add(btnCreateBackup);
-
-            btnRestoreBackup = CreateStyledButton("Restore Backup", new Point(200, 30));
-            btnRestoreBackup.Click += BtnRestoreBackup_Click;
-            groupBackup.Controls.Add(btnRestoreBackup);
-
-            this.Controls.Add(groupBackup);
-
-            // Activity Log
-            var groupLog = new GroupBox
-            {
-                Text = "Activity Log",
-                ForeColor = Color.White,
-                Location = new Point(20, 500),
-                Size = new Size(960, 200)
-            };
-
-            logTextBox = new RichTextBox
-            {
-                Location = new Point(10, 25),
-                Size = new Size(940, 160),
-                BackColor = Color.FromArgb(45, 45, 45),
-                ForeColor = Color.White,
-                Font = new Font("Consolas", 9),
-                ReadOnly = true,
-                BorderStyle = BorderStyle.FixedSingle
-            };
-            groupLog.Controls.Add(logTextBox);
-            this.Controls.Add(groupLog);
-
-            // Progress Bar
-            progressBarMain = new ProgressBar
-            {
-                Location = new Point(20, 720),
-                Size = new Size(960, 30),
-                Style = ProgressBarStyle.Blocks
-            };
-            this.Controls.Add(progressBarMain);
-
-            // Status bar at the bottom
-            var statusBar = new Panel
-            {
-                Location = new Point(0, this.Height - 25),
-                Size = new Size(this.Width, 25),
-                BackColor = Color.FromArgb(45, 45, 45),
-                Dock = DockStyle.Bottom
-            };
-
-            var statusLabel = new Label
-            {
-                Text = "Ready - PC Performance Optimizer Pro v1.2",
-                Font = new Font("Segoe UI", 8),
-                ForeColor = Color.LightGray,
-                Location = new Point(10, 5),
-                Size = new Size(300, 15),
-                AutoSize = false
-            };
-            statusBar.Controls.Add(statusLabel);
-
-            var versionLabel = new Label
-            {
-                Text = "Build 2024.12.28",
-                Font = new Font("Segoe UI", 8),
-                ForeColor = Color.Gray,
-                Location = new Point(this.Width - 120, 5),
-                Size = new Size(100, 15),
-                TextAlign = ContentAlignment.MiddleRight,
-                Anchor = AnchorStyles.Right | AnchorStyles.Top
-            };
-            statusBar.Controls.Add(versionLabel);
-            this.Controls.Add(statusBar);
-
-            AddTooltips();
-            AddEventHandlers();
-        }
-
-        private void AddTooltips()
-        {
-            var toolTip = new ToolTip();
-            toolTip.SetToolTip(btnOptimizeForFPS,
-                "Apply comprehensive FPS and ping optimizations including CPU, memory, graphics, and network tweaks");
-            toolTip.SetToolTip(btnOptimizeWindows,
-                "Optimize Windows settings for better gaming performance");
-            toolTip.SetToolTip(btnOptimizeGraphics,
-                "Optimize graphics drivers and GPU settings for maximum FPS");
-            toolTip.SetToolTip(btnOptimizeNetwork,
-                "Reduce network latency and optimize TCP settings for online gaming");
-            toolTip.SetToolTip(btnDiskCleanup,
-                "Comprehensive disk cleanup: temp files, browser cache, Windows logs, game cache, and more");
-            toolTip.SetToolTip(btnQuickClean,
-                "Quick cleanup of temporary files and immediate cache - takes under 30 seconds");
-            toolTip.SetToolTip(btnHealthCheck,
-                "Complete PC health analysis: CPU, memory, storage, graphics, network, and system status");
-            toolTip.SetToolTip(btnCreateBackup,
-                "Create a comprehensive system backup before applying optimizations");
-            toolTip.SetToolTip(btnRestoreBackup,
-                "Restore your system to the state before optimizations were applied");
-            toolTip.SetToolTip(btnCheckStatus,
-                "Check current optimization status and refresh display");
-            toolTip.SetToolTip(btnTestPing,
-                "Test your current ping to Google servers");
-        }
-
-        private void AddEventHandlers()
-        {
-            this.Load += MainForm_Load;
-            this.FormClosing += MainForm_FormClosing;
-        }
-
-        private Button CreateStyledButton(string text, Point location, Size? customSize = null)
-        {
-            var button = new Button
-            {
-                Text = text,
-                Location = location,
-                Size = customSize ?? new Size(160, 35),
-                BackColor = Color.FromArgb(0, 120, 215),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9),
-                Cursor = Cursors.Hand
-            };
-            button.FlatAppearance.BorderSize = 0;
-
-            button.MouseEnter += new EventHandler((s, e) => button.BackColor = Color.FromArgb(30, 140, 235));
-            button.MouseLeave += new EventHandler((s, e) => button.BackColor = Color.FromArgb(0, 120, 215));
-
-            return button;
+            LogMessage("PC Optimizer started successfully.");
+            LogMessage("System analysis in progress...");
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             var result = MessageBox.Show(
-                "Are you sure you want to exit PC Performance Optimizer Pro?",
+                "Are you sure you want to exit PC Optimizer?",
                 "Confirm Exit",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
@@ -1092,12 +1574,6 @@ namespace PCOptimizer
             {
                 e.Cancel = true;
             }
-        }
-
-        private void MainForm_Load(object sender, EventArgs e)
-        {
-            LogMessage("PC Performance Optimizer Pro started successfully.");
-            LogMessage("System analysis in progress...");
         }
     }
 }

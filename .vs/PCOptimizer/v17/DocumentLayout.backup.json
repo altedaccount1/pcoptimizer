@@ -3,10 +3,6 @@
   "WorkspaceRootPath": "C:\\Users\\wyses\\source\\repos\\PCOP\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|C:\\Users\\wyses\\source\\repos\\PCOP\\pcop\\core\\systemhealthchecker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|solutionrelative:pcop\\core\\systemhealthchecker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|C:\\Users\\wyses\\source\\repos\\PCOP\\pcop\\forms\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|solutionrelative:pcop\\forms\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -15,7 +11,15 @@
       "RelativeMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|solutionrelative:pcop\\forms\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|c:\\users\\wyses\\source\\repos\\pcop\\pcop\\core\\diskcleanupmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|C:\\Users\\wyses\\source\\repos\\PCOP\\pcop\\forms\\licenseform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|solutionrelative:pcop\\forms\\licenseform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|c:\\users\\wyses\\source\\repos\\pcop\\pcop\\core\\systemhealthchecker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|solutionrelative:pcop\\core\\systemhealthchecker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|C:\\Users\\wyses\\source\\repos\\PCOP\\pcop\\core\\diskcleanupmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|solutionrelative:pcop\\core\\diskcleanupmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -37,10 +41,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|C:\\Users\\wyses\\source\\repos\\PCOP\\pcop\\forms\\licenseform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|solutionrelative:pcop\\forms\\licenseform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|C:\\Users\\wyses\\source\\repos\\PCOP\\pcop\\forms\\licenseform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|solutionrelative:pcop\\forms\\licenseform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{5E8DD037-C120-41DE-8C47-DF04D534A550}|PCOP\\PCOptimizer.csproj|C:\\Users\\wyses\\source\\repos\\PCOP\\pcop\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -89,11 +89,11 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 6,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "MainForm.cs [Design]",
               "DocumentMoniker": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Forms\\MainForm.cs",
               "RelativeDocumentMoniker": "PCOP\\Forms\\MainForm.cs",
@@ -106,18 +106,6 @@
             {
               "$type": "Document",
               "DocumentIndex": 5,
-              "Title": "OptimizationEngine.cs",
-              "DocumentMoniker": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Core\\OptimizationEngine.cs",
-              "RelativeDocumentMoniker": "PCOP\\Core\\OptimizationEngine.cs",
-              "ToolTip": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Core\\OptimizationEngine.cs",
-              "RelativeToolTip": "PCOP\\Core\\OptimizationEngine.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-16T04:44:43.129Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
               "Title": "LicenseManager.cs",
               "DocumentMoniker": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Core\\LicenseManager.cs",
               "RelativeDocumentMoniker": "PCOP\\Core\\LicenseManager.cs",
@@ -129,31 +117,32 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "MainForm.cs",
               "DocumentMoniker": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Forms\\MainForm.cs",
               "RelativeDocumentMoniker": "PCOP\\Forms\\MainForm.cs",
               "ToolTip": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Forms\\MainForm.cs",
               "RelativeToolTip": "PCOP\\Forms\\MainForm.cs",
-              "ViewState": "AgIAACcEAAAAAAAAAADwvzoEAABQAAAAAAAAAA==",
+              "ViewState": "AgIAAKoAAAAAAAAAAAAiwL0AAABaAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-16T04:43:19.714Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "LicenseForm.cs [Design]",
               "DocumentMoniker": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Forms\\LicenseForm.cs",
               "RelativeDocumentMoniker": "PCOP\\Forms\\LicenseForm.cs",
               "ToolTip": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Forms\\LicenseForm.cs [Design]",
               "RelativeToolTip": "PCOP\\Forms\\LicenseForm.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-26T05:16:47.939Z"
+              "WhenOpened": "2025-08-26T05:16:47.939Z",
+              "EditorCaption": " [Design]"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": "SystemInfo.cs",
               "DocumentMoniker": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Core\\SystemInfo.cs",
               "RelativeDocumentMoniker": "PCOP\\Core\\SystemInfo.cs",
@@ -165,20 +154,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 3,
               "Title": "SystemHealthChecker.cs",
               "DocumentMoniker": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Core\\SystemHealthChecker.cs",
               "RelativeDocumentMoniker": "PCOP\\Core\\SystemHealthChecker.cs",
               "ToolTip": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Core\\SystemHealthChecker.cs",
               "RelativeToolTip": "PCOP\\Core\\SystemHealthChecker.cs",
-              "ViewState": "AgIAAJEDAAAAAAAAAADwv5sDAAA2AAAAAAAAAA==",
+              "ViewState": "AgIAAJEDAAAAAAAAAADwv54DAABPAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-27T02:04:15.115Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "SecurityManager.cs",
               "DocumentMoniker": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Core\\SecurityManager.cs",
               "RelativeDocumentMoniker": "PCOP\\Core\\SecurityManager.cs",
@@ -190,7 +179,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "DiskCleanupManager.cs",
               "DocumentMoniker": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Core\\DiskCleanupManager.cs",
               "RelativeDocumentMoniker": "PCOP\\Core\\DiskCleanupManager.cs",
@@ -198,20 +187,32 @@
               "RelativeToolTip": "PCOP\\Core\\DiskCleanupManager.cs",
               "ViewState": "AgIAAMsBAAAAAAAAAAAAACcCAAAdAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-27T02:03:44.315Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-27T02:03:44.315Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 2,
               "Title": "LicenseForm.cs",
               "DocumentMoniker": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Forms\\LicenseForm.cs",
               "RelativeDocumentMoniker": "PCOP\\Forms\\LicenseForm.cs",
               "ToolTip": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Forms\\LicenseForm.cs",
               "RelativeToolTip": "PCOP\\Forms\\LicenseForm.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAADAAAAArAAAAAAAAAA==",
+              "ViewState": "AgIAAFQCAAAAAAAAAAAYwHkCAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-16T04:44:09.961Z"
+              "WhenOpened": "2025-08-16T04:44:09.961Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "OptimizationEngine.cs",
+              "DocumentMoniker": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Core\\OptimizationEngine.cs",
+              "RelativeDocumentMoniker": "PCOP\\Core\\OptimizationEngine.cs",
+              "ToolTip": "C:\\Users\\wyses\\source\\repos\\PCOP\\PCOP\\Core\\OptimizationEngine.cs",
+              "RelativeToolTip": "PCOP\\Core\\OptimizationEngine.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-16T04:44:43.129Z"
             },
             {
               "$type": "Document",
